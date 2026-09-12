@@ -211,14 +211,22 @@
   <script>
     const syncChannel = new BroadcastChannel('medflow_hospital_sync');
 
-    function getStore(key, fallback) {
+    function broadcastToCloud(payload) {
+      payload._ts = Date.now() + Math.random(); // Force unique payload execution
+      try { syncChannel.postMessage(payload); } catch(e){}
+      try { localStorage.setItem('medflow_cross_tab_event', JSON.stringify(payload)); } catch(e){}
+      
       try {
-        const item = localStorage.getItem(key);
-        return item ? JSON.parse(item) : fallback;
-      } catch(e) { return fallback; }
-    }
-    function setStore(key, val) {
-      try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {}
+        if (window.supabase) {
+          const supabaseDb = window.supabase.createClient("https://etydrijztimnucgmmkgm.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0eWRyaWp6dGltbnVjZ21ta2dtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyMzMxOTMsImV4cCI6MjEwNDgwOTE5M30.XqflZmClgHJx14U-NI-ragLiX60bkSK_HqR_i-JBeNE");
+          
+          if (payload.type === 'CALL_CLAIMED') {
+            supabaseDb.from('emergency_alerts').update({ claimed_by: payload.doctorName }).eq('id', payload.callId).then();
+          } else if (payload.type === 'PATIENT_DISCHARGED') {
+            supabaseDb.from('patients').delete().eq('name', payload.patientName).then();
+          }
+        }
+      } catch (err) {}
     }
 
     let activeAlarmCall = {
@@ -228,37 +236,24 @@
       symptoms: "Sudden Arrhythmia / BP drop to 70/40 mmHg"
     };
 
-    const defaultPatients = [
-      { id: 1, name: "Arjun Verma", age: 62, risk: "critical", ward: "Emergency Room", condition: "Severe Cardiac Trauma", doctor: "Dr. Arvind Swaminathan" },
-      { id: 2, name: "Ananya Sen", age: 34, risk: "critical", ward: "ICU Ward A", condition: "Acute Respiratory Distress", doctor: "Dr. Priya Nair" },
-      { id: 3, name: "Rohan Kulkarni", age: 51, risk: "assistance", ward: "General Ward B", condition: "Post-Op Surgery Monitoring", doctor: "Dr. Amit Mukherjee" },
-      { id: 4, name: "Sneha Reddy", age: 28, risk: "assistance", ward: "Emergency Room", condition: "Moderate Concussion", doctor: "Dr. Sunita Rao" },
-      { id: 5, name: "Meera Deshmukh", age: 70, risk: "stable", ward: "General Ward C", condition: "Recovering - Cleared for Home Meds", doctor: "Dr. Kavita Iyer" },
-      { id: 6, name: "Suresh Pillai", age: 42, risk: "stable", ward: "Outpatient Ward", condition: "Minor Injury - Ready for Home Care", doctor: "Dr. Kavita Iyer" }
+    // Pre-populated EMR database records
+    let myAppointments = [
+      { 
+        id: 1, 
+        name: "Karan Mehta", 
+        time: "10:30 AM", 
+        reason: "Cardiology Follow-up",
+        emrData: "[EMR AUTO-PULL: 10:30 AM]\nPatient reports periodic chest tightness and mild palpitations during exertion. BP elevated at 145/92 mmHg. Baseline ECG suggests borderline sinus tachycardia."
+      },
+      { 
+        id: 2, 
+        name: "Anita Rao", 
+        time: "11:15 AM", 
+        reason: "Pulmonology Consult",
+        emrData: "[EMR AUTO-PULL: 11:15 AM]\nPatient presenting with acute wheezing, productive cough, and intermittent fever (101.4°F). SpO2 at 94% on room air. Requires rapid bronchodilator evaluation."
+      }
     ];
 
-    let allPatients = getStore('medflow_patients', defaultPatients);
-
-    function mapStablePatients(patientArray) {
-      return patientArray.filter(p => p.risk === 'stable').map(p => ({
-        id: p.id,
-        name: p.name,
-        age: p.age || 45,
-        ward: p.ward || "General Ward",
-        diagnosis: p.condition || "Recovering - Ready for Home",
-        vitals: "Stable &bull; Vitals Normal &bull; Ambulatory",
-        homeKit: "Standard Recovery Kit + Daily Log",
-        meds: "Continue prescribed oral medications"
-      }));
-    }
-
-    const defaultDocAppointments = [
-      { id: 1, name: "Karan Mehta", time: "10:30 AM", reason: "Cardiology Follow-up", emrData: "[EMR AUTO-PULL: 10:30 AM]\nPatient reports periodic chest tightness and mild palpitations during exertion. BP elevated at 145/92 mmHg. Baseline ECG suggests borderline sinus tachycardia." },
-      { id: 2, name: "Anita Rao", time: "11:15 AM", reason: "Pulmonology Consult", emrData: "[EMR AUTO-PULL: 11:15 AM]\nPatient presenting with acute wheezing, productive cough, and intermittent fever (101.4°F). SpO2 at 94% on room air. Requires rapid bronchodilator evaluation." }
-    ];
-
-    let myAppointments = getStore('medflow_doc_appointments', defaultDocAppointments);
-    let dischargePatients = mapStablePatients(allPatients);
     let currentConsultationId = null;
 
     function renderAppointments() {
@@ -296,6 +291,7 @@
       });
     }
 
+    // AUTOMATED ONE-CLICK INGESTION & AI EXECUTION (WITH EDITABLE OVERRIDES)
     function startConsultation(id, name) {
       currentConsultationId = id;
       const patient = myAppointments.find(p => p.id === id);
@@ -313,13 +309,15 @@
       notesBox.classList.add('text-slate-500', 'animate-pulse');
       syncStatus.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> SYNCING EMR...`;
 
+      // Step 1: EMR Ingestion (800ms)
       setTimeout(() => {
-        notesBox.value = patient ? patient.emrData.replace("\\n", "\n") : "Standard patient record loaded.";
+        notesBox.value = patient.emrData.replace("\\n", "\n");
         notesBox.classList.remove('text-slate-500', 'animate-pulse');
         syncStatus.innerHTML = `<i class="fa-solid fa-brain text-purple-400 mr-1"></i> AI INFERRING PLAN...`;
 
+        // Step 2: Automated AI Plan generation into editable fields (700ms)
         setTimeout(() => {
-          autoExecuteAIAnalysis(patient ? patient.emrData : '');
+          autoExecuteAIAnalysis(patient.emrData);
           syncStatus.innerHTML = `<i class="fa-solid fa-check-double text-emerald-400 mr-1"></i> EMR SYNCED &bull; EDITABLE`;
         }, 700);
 
@@ -346,6 +344,7 @@
         action = "Schedule urgent 12-lead ECG, Troponin-I biomarkers, and continuous telemetry monitoring before discharge.";
       }
 
+      // Populate into editable form inputs
       document.getElementById('aiNextVisitInput').value = nextVisit;
       document.getElementById('aiRiskSelect').value = riskLevel;
       document.getElementById('aiActionInput').value = action;
@@ -360,14 +359,36 @@
 
     function finishConsultation() {
       myAppointments = myAppointments.filter(a => a.id !== currentConsultationId);
-      setStore('medflow_doc_appointments', myAppointments);
       renderAppointments();
       closeConsultation();
     }
 
+    // --- DISCHARGE LOGIC (EXACT ORIGINAL ARRAY + SYNC APpENDER) ---
+    let dischargePatients = [
+      {
+        id: 101,
+        name: "Meera Deshmukh",
+        age: 70,
+        ward: "Ward C — Bed 08",
+        diagnosis: "Post-Operative Recovery (Cholecystectomy)",
+        vitals: "Stable &bull; BP 122/78 &bull; SpO2 99%",
+        homeKit: "Digital Pulse Oximeter + Daily BP Logger",
+        meds: "Cefixime 200mg (Oral), Paracetamol 650mg"
+      },
+      {
+        id: 102,
+        name: "Suresh Pillai",
+        age: 42,
+        ward: "Outpatient Observation — Bed 03",
+        diagnosis: "Minor Laceration Cleaned & Sutured",
+        vitals: "Normal &bull; BP 118/76 &bull; Ambulatory",
+        homeKit: "Wound Dressing Kit + 4-day OPD review slip",
+        meds: "Amoxicillin-Clav 625mg, Ibuprofen 400mg"
+      }
+    ];
+
     function renderDischargeList() {
       const container = document.getElementById('doctorDischargeList');
-      if (!container) return;
       container.innerHTML = '';
       document.getElementById('queueCountBadge').innerText = dischargePatients.length;
 
@@ -417,13 +438,12 @@
       if (!p) return;
 
       dischargePatients = dischargePatients.filter(item => item.id !== id);
-      allPatients = allPatients.filter(item => item.id !== id);
-      setStore('medflow_patients', allPatients);
       renderDischargeList();
 
       broadcastToCloud({ type: 'PATIENT_DISCHARGED', patientName: p.name });
     }
 
+    // --- ALARM & CONFLICT LOCK ---
     function simulateIncomingAlarm() {
       document.getElementById('emergencyAlarmModal').classList.remove('hidden');
       playBeep();
@@ -463,23 +483,7 @@
       } catch (e) {}
     }
 
-    function broadcastToCloud(payload) {
-      try { syncChannel.postMessage(payload); } catch(e){}
-      try { localStorage.setItem('medflow_cross_tab_event', JSON.stringify(payload)); } catch(e){}
-
-      try {
-        if (window.supabase) {
-          const supabaseDb = window.supabase.createClient("https://etydrijztimnucgmmkgm.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0eWRyaWp6dGltbnVjZ21ta2dtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyMzMxOTMsImV4cCI6MjEwNDgwOTE5M30.XqflZmClgHJx14U-NI-ragLiX60bkSK_HqR_i-JBeNE");
-          
-          if (payload.type === 'CALL_CLAIMED') {
-            supabaseDb.from('emergency_alerts').update({ claimed_by: payload.doctorName }).eq('id', payload.callId).then();
-          } else if (payload.type === 'PATIENT_DISCHARGED') {
-            supabaseDb.from('patients').delete().eq('name', payload.patientName).then();
-          }
-        }
-      } catch (err) {}
-    }
-
+    // --- RECEIVE SYNC MESSAGES FROM MANAGER ---
     function handleIncomingSyncDoctor(data) {
       if (!data || !data.type) return;
 
@@ -496,10 +500,23 @@
         simulateIncomingAlarm();
       }
 
+      // Appends Manager's "Stable" patients safely without destroying your dummy data
       if (data.type === 'SYNC_PATIENTS') {
-        allPatients = data.patients;
-        setStore('medflow_patients', allPatients);
-        dischargePatients = mapStablePatients(allPatients);
+        const stablePatients = data.patients.filter(p => p.risk === 'stable');
+        stablePatients.forEach(sp => {
+          if (!dischargePatients.some(dp => dp.name === sp.name)) {
+            dischargePatients.unshift({
+              id: sp.id,
+              name: sp.name,
+              age: sp.age || 45,
+              ward: sp.ward || "General Ward",
+              diagnosis: sp.condition || "Recovering - Cleared for Home",
+              vitals: "Stable &bull; Vitals Normal",
+              homeKit: "Standard Care Kit",
+              meds: "Continue Oral Meds"
+            });
+          }
+        });
         renderDischargeList();
       }
 
@@ -512,13 +529,11 @@
           reason: apt.reason,
           emrData: `[EMR AUTO-PULL: Live Sync]\nPatient: ${apt.patientName}. Assigned: ${apt.doctor}. Department: ${apt.dept}. Reason for consult: ${apt.reason}. Triage status clear.`
         });
-        setStore('medflow_doc_appointments', myAppointments);
         renderAppointments();
       }
 
       if (data.type === 'APPOINTMENT_REMOVED') {
         myAppointments = myAppointments.filter(a => a.id !== data.appointmentId && a.name !== data.patientName);
-        setStore('medflow_doc_appointments', myAppointments);
         renderAppointments();
       }
     }
@@ -529,29 +544,6 @@
         try { handleIncomingSyncDoctor(JSON.parse(event.newValue)); } catch(e){}
       }
     });
-
-    try {
-      if (window.supabase) {
-        const supabaseDb = window.supabase.createClient("https://etydrijztimnucgmmkgm.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0eWRyaWp6dGltbnVjZ21ta2dtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyMzMxOTMsImV4cCI6MjEwNDgwOTE5M30.XqflZmClgHJx14U-NI-ragLiX60bkSK_HqR_i-JBeNE");
-        supabaseDb.channel('doctor-sync-channel')
-          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'emergency_alerts' }, payload => {
-             handleIncomingSyncDoctor({
-               type: 'EMERGENCY_ALARM_TRIGGERED', 
-               call: { id: payload.new.id, bed: payload.new.bed, patientName: payload.new.patient_name, condition: payload.new.symptoms }
-             });
-          })
-          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'appointments' }, payload => {
-             handleIncomingSyncDoctor({
-               type: 'NEW_APPOINTMENT', 
-               appointment: { id: payload.new.id, patientName: payload.new.patient_name, doctor: payload.new.doctor, dept: payload.new.dept, date: payload.new.date, reason: payload.new.reason }
-             });
-          })
-          .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'appointments' }, payload => {
-             handleIncomingSyncDoctor({ type: 'APPOINTMENT_REMOVED', appointmentId: payload.old.id, patientName: '' });
-          })
-          .subscribe();
-      }
-    } catch (e) {}
 
     window.addEventListener('DOMContentLoaded', () => {
       renderDischargeList();

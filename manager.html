@@ -259,13 +259,6 @@
               </table>
             </div>
           </div>
-
-          <div class="bg-[#0E2127]/60 border border-[#183B44] rounded-2xl p-5">
-            <h2 class="font-semibold text-slate-200 text-sm mb-3 flex items-center gap-2">
-              <i class="fa-solid fa-triangle-exclamation text-[#F59E0B]"></i> Areas Facing Service Delays
-            </h2>
-            <div id="bottleneckContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
-          </div>
         </div>
 
         <div class="space-y-6">
@@ -295,7 +288,6 @@
               <button id="applyOptBtn" class="w-full bg-[#5AA7A7] hover:bg-[#499393] text-white font-semibold text-xs py-3 rounded-xl transition-all shadow-lg shadow-[#5AA7A7]/25 flex items-center justify-center gap-2">
                 <i class="fa-solid fa-check-double text-[#F59E0B]"></i> Apply Shift Adjustments
               </button>
-              <p class="text-[10px] text-center text-slate-400 mt-2">Dispatches doctors and nurses, balances wards, and clears backlogs.</p>
             </div>
           </div>
         </div>
@@ -558,8 +550,10 @@
   <script>
     const syncChannel = new BroadcastChannel('medflow_hospital_sync');
 
-    function broadcastSyncEvent(payload) {
+    function broadcastToCloud(payload) {
+      // Force unique event processing
       payload._ts = Date.now() + Math.random();
+      
       try { syncChannel.postMessage(payload); } catch(e){}
       try { localStorage.setItem('medflow_cross_tab_event', JSON.stringify(payload)); } catch(e){}
       
@@ -572,8 +566,6 @@
             supabaseDb.from('appointments').insert([{ id: payload.appointment.id, patient_name: payload.appointment.patientName, doctor: payload.appointment.doctor, dept: payload.appointment.dept, date: payload.appointment.date, reason: payload.appointment.reason }]).then();
           } else if (payload.type === 'APPOINTMENT_REMOVED') {
             supabaseDb.from('appointments').delete().eq('id', payload.appointmentId).then();
-          } else if (payload.type === 'PATIENT_DISCHARGED') {
-            supabaseDb.from('patients').delete().eq('name', payload.patientName).then();
           }
         }
       } catch (err) {}
@@ -901,7 +893,7 @@
       setStore('medflow_appointments', appointments);
       renderAppointments();
 
-      broadcastSyncEvent({
+      broadcastToCloud({
         type: 'APPOINTMENT_REMOVED',
         appointmentId: id,
         patientName: removedApt ? removedApt.patientName : ''
@@ -963,12 +955,13 @@
       closeAppointmentModal();
       document.getElementById('appointmentForm').reset();
 
-      broadcastSyncEvent({
+      broadcastToCloud({
         type: 'NEW_APPOINTMENT',
         appointment: newApt
       });
     }
 
+    // --- NEW: Sending SYNC_PATIENTS when manager changes patient status ---
     function changePatientRisk(patientId) {
       const p = patients.find(item => item.id === patientId);
       if (!p) return;
@@ -978,16 +971,15 @@
       setStore('medflow_patients', patients);
       renderPatients();
 
-      broadcastSyncEvent({ type: 'SYNC_PATIENTS', patients: patients });
+      broadcastToCloud({ type: 'SYNC_PATIENTS', patients: patients });
     }
 
     function removePatient(patientId) {
-      const p = patients.find(item => item.id === patientId);
-      patients = patients.filter(item => item.id !== patientId);
+      patients = patients.filter(p => p.id !== patientId);
       setStore('medflow_patients', patients);
       renderPatients();
 
-      broadcastSyncEvent({ type: 'SYNC_PATIENTS', patients: patients });
+      broadcastToCloud({ type: 'SYNC_PATIENTS', patients: patients });
     }
 
     function openPatientModal() { document.getElementById('patientModal').classList.remove('hidden'); }
@@ -1010,7 +1002,7 @@
       closePatientModal();
       document.getElementById('patientForm').reset();
 
-      broadcastSyncEvent({ type: 'SYNC_PATIENTS', patients: patients });
+      broadcastToCloud({ type: 'SYNC_PATIENTS', patients: patients });
     }
 
     function renderAlarmsAndRecommendations() {
@@ -1094,7 +1086,7 @@
       document.getElementById('globalAlarmText').innerText = `URGENT BROADCAST: ${title.toUpperCase()} - ${desc.toUpperCase()}`;
       document.getElementById('alarmBadge').classList.remove('hidden');
 
-      broadcastSyncEvent({
+      broadcastToCloud({
         type: 'EMERGENCY_ALARM_TRIGGERED',
         call: {
           id: newAlarm.id,
@@ -1191,19 +1183,23 @@
       });
     });
 
+    // --- RECEIVE DOCTOR DISCHARGE ---
     function handleIncomingSyncManager(data) {
       if (!data || !data.type) return;
 
       if (data.type === 'PATIENT_DISCHARGED') {
-        const dischargedName = data.patientName;
-        patients = patients.filter(p => p.name !== dischargedName);
+        patients = patients.filter(p => p.name !== data.patientName);
         setStore('medflow_patients', patients);
         renderPatients();
 
-        const currentBeds = parseInt(document.getElementById('bedCount').innerText) || 12;
-        const newCount = Math.min(100, currentBeds + 1);
-        document.getElementById('bedCount').innerText = newCount;
-        document.getElementById('bedBar').style.width = Math.max(5, 100 - newCount) + '%';
+        // Update total bed count freely when discharged
+        const bedCountEl = document.getElementById('bedCount');
+        if (bedCountEl) {
+          const currentBeds = parseInt(bedCountEl.innerText) || 12;
+          const newCount = Math.min(100, currentBeds + 1);
+          bedCountEl.innerText = newCount;
+          document.getElementById('bedBar').style.width = Math.max(5, 100 - newCount) + '%';
+        }
       }
 
       if (data.type === 'CALL_CLAIMED') {
@@ -1221,24 +1217,6 @@
         try { handleIncomingSyncManager(JSON.parse(event.newValue)); } catch(e){}
       }
     });
-
-    try {
-      if (window.supabase) {
-        const supabaseDb = window.supabase.createClient("https://etydrijztimnucgmmkgm.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0eWRyaWp6dGltbnVjZ21ta2dtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyMzMxOTMsImV4cCI6MjEwNDgwOTE5M30.XqflZmClgHJx14U-NI-ragLiX60bkSK_HqR_i-JBeNE");
-        supabaseDb.channel('manager-sync-channel')
-          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'emergency_alerts' }, payload => {
-            if (payload.new.claimed_by) {
-              handleIncomingSyncManager({ type: 'CALL_CLAIMED', callId: payload.new.id, doctorName: payload.new.claimed_by });
-            }
-          })
-          .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'patients' }, payload => {
-            if (payload.old && payload.old.name) {
-              handleIncomingSyncManager({ type: 'PATIENT_DISCHARGED', patientName: payload.old.name });
-            }
-          })
-          .subscribe();
-      }
-    } catch (e) {}
 
     function resetAllDemoData() {
       if (confirm("Reset all hospital demo data back to default initial state?")) {
