@@ -138,6 +138,32 @@
           <p class="text-xs text-slate-400">Available: 82 Beds | Surplus Capacity Ready</p>
         </div>
       </div>
+
+      <!-- RESTORED OVERVIEW CONTACTS & SUMMARY -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-[#0E2127]/60 border border-[#183B44] rounded-2xl p-5">
+          <h3 class="text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-circle-info text-[#5AA7A7]"></i> Core Operations Summary
+          </h3>
+          <ul class="space-y-2 text-xs text-slate-300">
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-[#BAC94A]"></i> 24-Hour Acute Care & 6 Surgical Theatres</li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-[#BAC94A]"></i> Continuous Laboratory & Pathology Diagnostics</li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-[#BAC94A]"></i> Automated Pharmacy Dispensing & Inventory Tracking</li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-[#BAC94A]"></i> Dynamic Doctor & Nurse Workload Balancing</li>
+          </ul>
+        </div>
+
+        <div class="bg-[#0E2127]/60 border border-[#183B44] rounded-2xl p-5">
+          <h3 class="text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-phone text-[#34D399]"></i> Department Desk Contacts
+          </h3>
+          <div class="space-y-2 text-xs text-slate-300">
+            <div class="flex justify-between p-2 bg-[#071317] rounded-lg border border-[#183B44]"><span>Emergency Desk:</span><span class="font-mono text-[#34D399] font-bold">+91 (044) 4396 9999</span></div>
+            <div class="flex justify-between p-2 bg-[#071317] rounded-lg border border-[#183B44]"><span>Ambulance Control:</span><span class="font-mono text-[#34D399] font-bold">+91 (044) 4396 9911</span></div>
+            <div class="flex justify-between p-2 bg-[#071317] rounded-lg border border-[#183B44]"><span>ICU Control:</span><span class="font-mono text-[#34D399] font-bold">+91 (044) 4396 9944</span></div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- TAB 2: CAPACITY & SHIFT PLANNER -->
@@ -286,7 +312,7 @@
 
             <div class="mt-6 pt-4 border-t border-[#183B44]">
               <button id="applyOptBtn" class="w-full bg-[#5AA7A7] hover:bg-[#499393] text-white font-semibold text-xs py-3 rounded-xl transition-all shadow-lg shadow-[#5AA7A7]/25 flex items-center justify-center gap-2">
-                <i class="fa-solid fa-check-double text-[#F59E0B]"></i> Apply Shift Adjustments
+                <i class="fa-solid fa-check-double text-[#F59E0B]"></i> Apply Shift Adjustments & Alert Doctor
               </button>
             </div>
           </div>
@@ -551,9 +577,7 @@
     const syncChannel = new BroadcastChannel('medflow_hospital_sync');
 
     function broadcastToCloud(payload) {
-      // Force unique event processing
       payload._ts = Date.now() + Math.random();
-      
       try { syncChannel.postMessage(payload); } catch(e){}
       try { localStorage.setItem('medflow_cross_tab_event', JSON.stringify(payload)); } catch(e){}
       
@@ -566,6 +590,8 @@
             supabaseDb.from('appointments').insert([{ id: payload.appointment.id, patient_name: payload.appointment.patientName, doctor: payload.appointment.doctor, dept: payload.appointment.dept, date: payload.appointment.date, reason: payload.appointment.reason }]).then();
           } else if (payload.type === 'APPOINTMENT_REMOVED') {
             supabaseDb.from('appointments').delete().eq('id', payload.appointmentId).then();
+          } else if (payload.type === 'PATIENT_DISCHARGED') {
+            supabaseDb.from('patients').delete().eq('name', payload.patientName).then();
           }
         }
       } catch (err) {}
@@ -624,7 +650,7 @@
     };
 
     const dynamicIndianStaff = [
-      { name: "Dr. Arvind Swaminathan", role: "Chief Cardiologist", ward: "Cardiology OPD", duty: "Cardiac Rounds & ECG Reviews", shift: "08:00 AM – 02:00 PM" },
+      { name: "Dr. Arvind Swaminathan", role: "Chief Cardiologist", ward: "Emergency Room", duty: "Acute Trauma Resuscitation & Surge Support", shift: "08:00 AM – 04:00 PM" },
       { name: "Dr. Priya Nair", role: "Pulmonologist / Intensivist", ward: "ICU Ward A", duty: "Ventilator Checks & OPD Asthma Desk", shift: "02:00 PM – 08:00 PM" },
       { name: "Dr. Amit Mukherjee", role: "Orthopedic Surgeon", ward: "Operation Theatre 2", duty: "Trauma Reconstruction & Surgeries", shift: "05:00 PM – 09:00 PM" },
       { name: "Dr. Sunita Rao", role: "Consultant Neurologist", ward: "Neuro Clinic", duty: "EEG Reviews & Stroke Recovery", shift: "09:00 AM – 03:00 PM" },
@@ -639,14 +665,14 @@
     const scenarios = {
       "08:00": { beds: 45, doctors: 6, nurses: 16, waitTime: "18 min", optWaitTime: "12 min", alertTitle: "Normal Operations", alertDesc: "Patient load is within standard limits. No major delays expected.", alertClass: "bg-emerald-500/10 border-emerald-500/30", alertTextClass: "text-[#34D399]", bottlenecks: [ { name: "Diagnostic Laboratory", status: "Normal", level: "40% Load", icon: "fa-flask", color: "text-[#5AA7A7]" }, { name: "Emergency Beds", status: "Sufficient", level: "55% Free", icon: "fa-bed", color: "text-[#BAC94A]" } ], recommendations: [ { text: "Keep existing ward staffing schedules active.", icon: "fa-sliders" }, { text: "Prepare diagnostic trays for mid-morning shift.", icon: "fa-vial" } ] },
       "12:00": { beds: 22, doctors: 5, nurses: 18, waitTime: "32 min", optWaitTime: "19 min", alertTitle: "Lab Processing Delay", alertDesc: "Diagnostic processing delays anticipated at 1:30 PM.", alertClass: "bg-[#F59E0B]/10 border-[#F59E0B]/30", alertTextClass: "text-[#F59E0B]", bottlenecks: [ { name: "Diagnostic Laboratory", status: "High Workload", level: "85% Load", icon: "fa-flask", color: "text-[#F59E0B]" }, { name: "Operation Theatre", status: "Normal", level: "60% Load", icon: "fa-heart-pulse", color: "text-[#6C8CBF]" } ], recommendations: [ { text: "Fast-track urgent blood analyses in Lab B.", icon: "fa-bolt" }, { text: "Schedule non-critical outpatient tests for afternoon.", icon: "fa-pause" } ] },
-      "17:00": { beds: 12, doctors: 8, nurses: 24, waitTime: "42 min", optWaitTime: "24 min", alertTitle: "Emergency Overload Warning", alertDesc: "Critical emergency bed shortage predicted between 5:00 PM – 7:00 PM.", alertClass: "bg-red-500/10 border-red-500/30 pulse-alert", alertTextClass: "text-red-300", bottlenecks: [ { name: "Emergency Department", status: "Critical", level: "92% Full", icon: "fa-truck-medical", color: "text-red-400" }, { name: "Shift Nurse Coverage", status: "High Demand", level: "Heavy Workload", icon: "fa-user-nurse", color: "text-[#F59E0B]" } ], recommendations: [ { text: "Discharge 4 stable patients home with medication & monitoring kit.", icon: "fa-house-medical" }, { text: "Move 2 nurses from Ward B to Emergency between 5:00–8:00 PM.", icon: "fa-people-arrows" }, { text: "Reserve 5 step-down beds for incoming emergency admissions.", icon: "fa-bed" } ] },
+      "17:00": { beds: 12, doctors: 8, nurses: 24, waitTime: "42 min", optWaitTime: "24 min", alertTitle: "Emergency Overload Warning", alertDesc: "Critical emergency bed shortage predicted between 5:00 PM – 7:00 PM.", alertClass: "bg-red-500/10 border-red-500/30 pulse-alert", alertTextClass: "text-red-300", bottlenecks: [ { name: "Emergency Department", status: "Critical", level: "92% Full", icon: "fa-truck-medical", color: "text-red-400" }, { name: "Shift Nurse Coverage", status: "High Demand", level: "Heavy Workload", icon: "fa-user-nurse", color: "text-[#F59E0B]" } ], recommendations: [ { text: "Discharge 4 stable patients home with medication & monitoring kit.", icon: "fa-house-medical" }, { text: "Move Dr. Arvind Swaminathan to ER for trauma surge response.", icon: "fa-people-arrows" }, { text: "Reserve 5 step-down beds for incoming emergency admissions.", icon: "fa-bed" } ] },
       "22:00": { beds: 18, doctors: 4, nurses: 12, waitTime: "28 min", optWaitTime: "16 min", alertTitle: "Night Staff Shortage", alertDesc: "Physician coverage dipping below recommended ratios for night shift.", alertClass: "bg-[#F59E0B]/10 border-[#F59E0B]/30", alertTextClass: "text-[#F59E0B]", bottlenecks: [ { name: "On-Call Doctors", status: "Limited", level: "4 Active", icon: "fa-user-doctor", color: "text-red-400" }, { name: "Ambulance Intake", status: "Moderate", level: "50% Capacity", icon: "fa-ambulance", color: "text-[#34D399]" } ], recommendations: [ { text: "Call in on-call physician for secondary coverage.", icon: "fa-phone" }, { text: "Route direct non-critical admissions to Ward 3.", icon: "fa-route" } ] }
     };
 
     function switchTab(tabId) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
       document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('bg-[#5AA7A7]', 'text-white', 'shadow-md', 'shadow-[#5AA7A7]/30');
+        btn.classList.remove('bg-[#5AA7A7]', 'text-white', 'shadow-md');
         btn.classList.add('text-slate-300');
       });
       document.getElementById(tabId).classList.remove('hidden');
@@ -689,7 +715,7 @@
               <div class="flex flex-col items-center justify-center gap-2">
                 <i class="fa-solid fa-users-slash text-2xl text-slate-600"></i>
                 <span class="text-xs font-medium">No personnel currently dispatched to this shift adjustment plan.</span>
-                <span class="text-[11px] text-slate-500">Click <strong>"Apply Shift Adjustments"</strong> to dispatch staff and track progress.</span>
+                <span class="text-[11px] text-slate-500">Click <strong>"Apply Shift Adjustments & Alert Doctor"</strong> to dispatch staff.</span>
               </div>
             </td>
           </tr>
@@ -768,22 +794,6 @@
       document.getElementById('alertTitle').className = `text-xs font-bold uppercase tracking-wide ${data.alertTextClass}`;
       document.getElementById('alertTitle').innerText = data.alertTitle;
       document.getElementById('alertDesc').innerText = data.alertDesc;
-
-      const bContainer = document.getElementById('bottleneckContainer');
-      bContainer.innerHTML = '';
-      data.bottlenecks.forEach(b => {
-        bContainer.innerHTML += `
-          <div class="bg-[#071317] border border-[#183B44] rounded-xl p-3 flex items-center gap-3">
-            <div class="p-2 bg-[#0E2127] rounded-lg ${b.color}">
-              <i class="fa-solid ${b.icon}"></i>
-            </div>
-            <div>
-              <div class="text-xs font-semibold text-slate-200">${b.name}</div>
-              <div class="text-[11px] text-slate-400">Status: <span class="font-medium text-slate-300">${b.status}</span> (${b.level})</div>
-            </div>
-          </div>
-        `;
-      });
 
       const rList = document.getElementById('recommendationList');
       rList.innerHTML = '';
@@ -961,7 +971,6 @@
       });
     }
 
-    // --- NEW: Sending SYNC_PATIENTS when manager changes patient status ---
     function changePatientRisk(patientId) {
       const p = patients.find(item => item.id === patientId);
       if (!p) return;
@@ -975,7 +984,8 @@
     }
 
     function removePatient(patientId) {
-      patients = patients.filter(p => p.id !== patientId);
+      const p = patients.find(item => item.id === patientId);
+      patients = patients.filter(item => item.id !== patientId);
       setStore('medflow_patients', patients);
       renderPatients();
 
@@ -1020,7 +1030,7 @@
             <p class="text-xs text-slate-300">${a.desc}</p>
             <div class="text-[10px] text-slate-400 pt-1 flex items-center gap-2">
               <span class="bg-[#0E2127] px-2 py-0.5 rounded border border-[#183B44]">Location: ${a.location}</span>
-              <span class="text-[#34D399]">Broadcasted to 48 on-duty mobile devices</span>
+              <span class="text-[#34D399]">Broadcasted to on-duty mobile devices</span>
             </div>
           </div>
         `;
@@ -1126,6 +1136,7 @@
       updateDashboard(keys[nextIdx]);
     });
 
+    // APPLY SHIFT ADJUSTMENTS + NOTIFY DOCTOR
     document.getElementById('applyOptBtn').addEventListener('click', () => {
       activeTimers.forEach(t => clearTimeout(t));
       activeTimers = [];
@@ -1145,17 +1156,25 @@
 
       const btn = document.getElementById('applyOptBtn');
       btn.disabled = true;
-      btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin mr-1.5 text-[#F59E0B]"></i> Dispatching Staff & Executing Tasks...`;
-      btn.className = "w-full bg-[#5AA7A7] text-white font-semibold text-xs py-3 rounded-xl cursor-default flex items-center justify-center gap-2 shadow-lg shadow-[#5AA7A7]/25";
+      btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin mr-1.5 text-[#F59E0B]"></i> Dispatching Staff & Alerting Doctor...`;
+
+      // Broadcast the shift directive to the Doctor's phone
+      broadcastToCloud({
+        type: 'SHIFT_REASSIGNMENT_DISPATCHED',
+        directive: {
+          id: Date.now(),
+          doctorName: "Dr. Arvind Swaminathan",
+          role: "Trauma Resuscitation Lead",
+          targetWard: "Emergency Room",
+          instruction: "Emergency overload surge reported. Report to Trauma Bay immediately."
+        }
+      });
       
       const completionMilestones = [
-        { index: 6, delay: 1500 },
-        { index: 7, delay: 2700 },
-        { index: 1, delay: 4000 },
-        { index: 3, delay: 5200 },
-        { index: 4, delay: 6300 },
-        { index: 0, delay: 7200 },
-        { index: 2, delay: 8200 }
+        { index: 6, delay: 2000 },
+        { index: 7, delay: 3500 },
+        { index: 1, delay: 5000 },
+        { index: 3, delay: 6500 }
       ];
 
       completionMilestones.forEach(m => {
@@ -1165,34 +1184,22 @@
             setStore('medflow_staff', staffAssignments);
             renderStaffAssignments();
           }
-
-          if (m.delay === 8200) {
-            btn.innerHTML = `<i class="fa-solid fa-circle-check mr-1.5 text-[#BAC94A]"></i> All Shift Duties Completed!`;
-            btn.className = "w-full bg-[#071317] text-[#BAC94A] border border-[#BAC94A]/30 font-semibold text-xs py-3 rounded-xl cursor-default flex items-center justify-center gap-2";
-            
-            let resetTimer = setTimeout(() => {
-              btn.disabled = false;
-              btn.innerHTML = `<i class="fa-solid fa-check-double text-[#F59E0B]"></i> Apply Shift Adjustments`;
-              btn.className = "w-full bg-[#5AA7A7] hover:bg-[#499393] text-white font-semibold text-xs py-3 rounded-xl transition-all shadow-lg shadow-[#5AA7A7]/25 flex items-center justify-center gap-2";
-            }, 3000);
-            activeTimers.push(resetTimer);
-          }
         }, m.delay);
-
         activeTimers.push(t);
       });
     });
 
-    // --- RECEIVE DOCTOR DISCHARGE ---
+    // INCOMING SYNC FROM DOCTOR
     function handleIncomingSyncManager(data) {
       if (!data || !data.type) return;
 
+      // DOCTOR DISCHARGED A PATIENT: Remove from Manager's list & free bed
       if (data.type === 'PATIENT_DISCHARGED') {
-        patients = patients.filter(p => p.name !== data.patientName);
+        const dischargedName = (data.patientName || '').trim().toLowerCase();
+        patients = patients.filter(p => p.name.trim().toLowerCase() !== dischargedName);
         setStore('medflow_patients', patients);
         renderPatients();
 
-        // Update total bed count freely when discharged
         const bedCountEl = document.getElementById('bedCount');
         if (bedCountEl) {
           const currentBeds = parseInt(bedCountEl.innerText) || 12;
@@ -1202,12 +1209,37 @@
         }
       }
 
+      // DOCTOR CLAIMED CODE RED
       if (data.type === 'CALL_CLAIMED') {
         const banner = document.getElementById('globalAlarmBanner');
         const text = document.getElementById('globalAlarmText');
         banner.className = "bg-emerald-600 text-white py-2.5 px-4 text-center font-bold text-xs uppercase tracking-wide flex justify-between items-center z-50 shadow-lg";
-        text.innerHTML = `<i class="fa-solid fa-lock text-sm mr-2"></i> ${data.callId ? 'CALL #' + data.callId : 'ER EMERGENCY'} LOCKED &bull; BED ATTENDED BY ${data.doctorName.toUpperCase()}`;
+        text.innerHTML = `<i class="fa-solid fa-lock text-sm mr-2"></i> EMERGENCY CALL LOCKED &bull; ATTENDED BY ${data.doctorName.toUpperCase()}`;
         document.getElementById('alarmBadge').classList.add('hidden');
+      }
+
+      // DOCTOR CONFIRMED SHIFT REASSIGNMENT DUTY
+      if (data.type === 'DOCTOR_SHIFT_TASK_COMPLETED') {
+        if (staffAssignments && staffAssignments.length > 0) {
+          staffAssignments.forEach(s => {
+            if (s.name.includes("Swaminathan")) {
+              s.status = "Completed";
+            }
+          });
+          setStore('medflow_staff', staffAssignments);
+          renderStaffAssignments();
+        }
+
+        const btn = document.getElementById('applyOptBtn');
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = `<i class="fa-solid fa-circle-check text-[#BAC94A]"></i> Doctor Confirmed on Duty!`;
+          btn.className = "w-full bg-[#071317] text-[#BAC94A] border border-[#BAC94A]/30 font-semibold text-xs py-3 rounded-xl flex items-center justify-center gap-2";
+          setTimeout(() => {
+            btn.innerHTML = `<i class="fa-solid fa-check-double text-[#F59E0B]"></i> Apply Shift Adjustments & Alert Doctor`;
+            btn.className = "w-full bg-[#5AA7A7] hover:bg-[#499393] text-white font-semibold text-xs py-3 rounded-xl transition-all shadow-lg shadow-[#5AA7A7]/25 flex items-center justify-center gap-2";
+          }, 3500);
+        }
       }
     }
 
@@ -1217,6 +1249,24 @@
         try { handleIncomingSyncManager(JSON.parse(event.newValue)); } catch(e){}
       }
     });
+
+    try {
+      if (window.supabase) {
+        const supabaseDb = window.supabase.createClient("https://etydrijztimnucgmmkgm.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0eWRyaWp6dGltbnVjZ21ta2dtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyMzMxOTMsImV4cCI6MjEwNDgwOTE5M30.XqflZmClgHJx14U-NI-ragLiX60bkSK_HqR_i-JBeNE");
+        supabaseDb.channel('manager-sync-channel')
+          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'emergency_alerts' }, payload => {
+            if (payload.new.claimed_by) {
+              handleIncomingSyncManager({ type: 'CALL_CLAIMED', callId: payload.new.id, doctorName: payload.new.claimed_by });
+            }
+          })
+          .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'patients' }, payload => {
+            if (payload.old && payload.old.name) {
+              handleIncomingSyncManager({ type: 'PATIENT_DISCHARGED', patientName: payload.old.name });
+            }
+          })
+          .subscribe();
+      }
+    } catch (e) {}
 
     function resetAllDemoData() {
       if (confirm("Reset all hospital demo data back to default initial state?")) {
