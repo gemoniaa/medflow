@@ -1,152 +1,152 @@
-!DOCTYPE html
-html lang=en
-head
-  meta charset=UTF-8
-  meta name=viewport content=width=device-width, initial-scale=1.0
-  titleSRM Global Hospitals — MedFlow Operational Gatewaytitle
-  script src=httpscdn.tailwindcss.comscript
-  link rel=stylesheet href=httpscdnjs.cloudflare.comajaxlibsfont-awesome6.4.0cssall.min.css
-  style
-    @import url('httpsfonts.googleapis.comcss2family=Interwght@300;400;500;600;700;800&display=swap');
-    body { font-family 'Inter', sans-serif; }
-  style
-head
-body class=bg-[#091519] text-slate-100 min-h-screen flex flex-col justify-between selectionbg-[#5AA7A7] selectiontext-white
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SRM Global Hospitals — MedFlow Operational Gateway</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+  </style>
+</head>
+<body class="bg-[#091519] text-slate-100 min-h-screen flex flex-col justify-between selection:bg-[#5AA7A7] selection:text-white">
 
-  !-- TOP HEADER --
-  header class=border-b border-[#183B44] bg-[#0A191E]90 backdrop-blur py-4 px-6
-    div class=max-w-6xl mx-auto flex justify-between items-center
-      div class=flex items-center space-x-3
-        div class=h-10 w-10 bg-[#0E2127] border border-[#183B44] rounded-xl flex items-center justify-center text-[#5AA7A7] text-xl shadow-inner
-          i class=fa-solid fa-heart-pulsei
-        div
-        div
-          h1 class=text-base font-bold text-white flex items-center gap-2
+  <!-- TOP HEADER -->
+  <header class="border-b border-[#183B44] bg-[#0A191E]/90 backdrop-blur py-4 px-6">
+    <div class="max-w-6xl mx-auto flex justify-between items-center">
+      <div class="flex items-center space-x-3">
+        <div class="h-10 w-10 bg-[#0E2127] border border-[#183B44] rounded-xl flex items-center justify-center text-[#5AA7A7] text-xl shadow-inner">
+          <i class="fa-solid fa-heart-pulse"></i>
+        </div>
+        <div>
+          <h1 class="text-base font-bold text-white flex items-center gap-2">
             SRM Global Hospitals
-            span class=text-[10px] font-bold px-2 py-0.5 bg-[#34D399]15 border border-[#34D399]40 text-[#34D399] rounded-full
+            <span class="text-[10px] font-bold px-2 py-0.5 bg-[#34D399]/15 border border-[#34D399]/40 text-[#34D399] rounded-full">
               MEDFLOW 2.0
-            span
-          h1
-          p class=text-[11px] text-[#34D399]70iOperational Nervous System & Real-Time Syncip
-        div
-      div
-      span class=text-xs bg-[#0E2127] text-slate-400 border border-[#183B44] px-3 py-1.5 rounded-xl hidden sminline-block
-        i class=fa-solid fa-shield-halved text-[#5AA7A7] mr-1.5i Role-Based Access Control
-      span
-    div
-  header
+            </span>
+          </h1>
+          <p class="text-[11px] text-[#34D399]/70"><i>Operational Nervous System & Real-Time Sync</i></p>
+        </div>
+      </div>
+      <span class="text-xs bg-[#0E2127] text-slate-400 border border-[#183B44] px-3 py-1.5 rounded-xl hidden sm:inline-block">
+        <i class="fa-solid fa-shield-halved text-[#5AA7A7] mr-1.5"></i> Role-Based Access Control
+      </span>
+    </div>
+  </header>
 
-  !-- MAIN SELECTION HUB --
-  main class=max-w-5xl mx-auto px-4 py-12 flex-grow flex flex-col justify-center items-center
+  <!-- MAIN SELECTION HUB -->
+  <main class="max-w-5xl mx-auto px-4 py-12 flex-grow flex flex-col justify-center items-center">
     
-    div class=text-center max-w-2xl mb-10 space-y-2
-      span class=text-xs font-bold uppercase tracking-widest text-[#5AA7A7] bg-[#5AA7A7]10 border border-[#5AA7A7]30 px-3 py-1 rounded-full
+    <div class="text-center max-w-2xl mb-10 space-y-2">
+      <span class="text-xs font-bold uppercase tracking-widest text-[#5AA7A7] bg-[#5AA7A7]/10 border border-[#5AA7A7]/30 px-3 py-1 rounded-full">
         Select Access Interface
-      span
-      h2 class=text-2xl smtext-3xl font-extrabold text-white mt-3Which portal are you logging intoh2
-      p class=text-xs smtext-sm text-slate-400
+      </span>
+      <h2 class="text-2xl sm:text-3xl font-extrabold text-white mt-3">Which portal are you logging into?</h2>
+      <p class="text-xs sm:text-sm text-slate-400">
         Choose your operational viewpoint to launch either the command center or bedside workstation.
-      p
-    div
+      </p>
+    </div>
 
-    !-- PORTAL CARDS --
-    div class=grid grid-cols-1 mdgrid-cols-2 gap-6 w-full max-w-4xl
+    <!-- PORTAL CARDS -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl">
 
-      !-- CARD 1 MANAGER DASHBOARD --
-      a href=manager.html class=group bg-[#0E2127]80 hoverbg-[#0E2127] border border-[#183B44] hoverborder-[#5AA7A7] rounded-3xl p-6 transition-all duration-300 shadow-xl hovershadow-[#5AA7A7]15 flex flex-col justify-between space-y-6
-        div class=space-y-4
-          div class=flex justify-between items-start
-            div class=w-14 h-14 bg-[#071317] border border-[#183B44] group-hoverborder-[#5AA7A7] rounded-2xl flex items-center justify-center text-[#5AA7A7] text-2xl transition-all
-              i class=fa-solid fa-hospital-useri
-            div
-            span class=text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-[#5AA7A7]15 text-[#5AA7A7] border border-[#5AA7A7]30
+      <!-- CARD 1: MANAGER DASHBOARD -->
+      <a href="manager.html" class="group bg-[#0E2127]/80 hover:bg-[#0E2127] border border-[#183B44] hover:border-[#5AA7A7] rounded-3xl p-6 transition-all duration-300 shadow-xl hover:shadow-[#5AA7A7]/15 flex flex-col justify-between space-y-6">
+        <div class="space-y-4">
+          <div class="flex justify-between items-start">
+            <div class="w-14 h-14 bg-[#071317] border border-[#183B44] group-hover:border-[#5AA7A7] rounded-2xl flex items-center justify-center text-[#5AA7A7] text-2xl transition-all">
+              <i class="fa-solid fa-hospital-user"></i>
+            </div>
+            <span class="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-[#5AA7A7]/15 text-[#5AA7A7] border border-[#5AA7A7]/30">
               Operations
-            span
-          div
+            </span>
+          </div>
 
-          div
-            h3 class=text-lg font-bold text-white group-hovertext-[#5AA7A7] transition-colors
+          <div>
+            <h3 class="text-lg font-bold text-white group-hover:text-[#5AA7A7] transition-colors">
               Hospital Operations Manager
-            h3
-            p class=text-xs text-slate-400 mt-1
+            </h3>
+            <p class="text-xs text-slate-400 mt-1">
               Central command console for facility resource balancing, patient beds, and clinic queues.
-            p
-          div
+            </p>
+          </div>
 
-          ul class=space-y-2 text-xs text-slate-300 border-t border-[#183B44] pt-3
-            li class=flex items-center gap-2i class=fa-solid fa-check text-[#34D399]i 250-Bed Real-Time Ward Monitoringli
-            li class=flex items-center gap-2i class=fa-solid fa-check text-[#34D399]i Automated Shift & Capacity Plannerli
-            li class=flex items-center gap-2i class=fa-solid fa-check text-[#34D399]i Emergency Code Red Alert Broadcastli
-            li class=flex items-center gap-2i class=fa-solid fa-check text-[#34D399]i AI-Routed Clinic Appointment Deskli
-          ul
-        div
+          <ul class="space-y-2 text-xs text-slate-300 border-t border-[#183B44] pt-3">
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-[#34D399]"></i> 250-Bed Real-Time Ward Monitoring</li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-[#34D399]"></i> Automated Shift & Capacity Planner</li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-[#34D399]"></i> Emergency Code Red Alert Broadcast</li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-[#34D399]"></i> AI-Routed Clinic Appointment Desk</li>
+          </ul>
+        </div>
 
-        div class=w-full bg-[#5AA7A7] group-hoverbg-[#4a9292] text-white font-bold text-xs py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#5AA7A7]20
-          spanLaunch Manager Consolespan
-          i class=fa-solid fa-arrow-right text-[11px] group-hovertranslate-x-1 transition-transformi
-        div
-      a
+        <div class="w-full bg-[#5AA7A7] group-hover:bg-[#4a9292] text-white font-bold text-xs py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#5AA7A7]/20">
+          <span>Launch Manager Console</span>
+          <i class="fa-solid fa-arrow-right text-[11px] group-hover:translate-x-1 transition-transform"></i>
+        </div>
+      </a>
 
-      !-- CARD 2 DOCTOR WORKSTATION --
-      a href=doctor.html class=group bg-[#0E2127]80 hoverbg-[#0E2127] border border-[#183B44] hoverborder-[#34D399] rounded-3xl p-6 transition-all duration-300 shadow-xl hovershadow-[#34D399]15 flex flex-col justify-between space-y-6
-        div class=space-y-4
-          div class=flex justify-between items-start
-            div class=w-14 h-14 bg-[#071317] border border-[#183B44] group-hoverborder-[#34D399] rounded-2xl flex items-center justify-center text-[#34D399] text-2xl transition-all
-              i class=fa-solid fa-user-doctori
-            div
-            span class=text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-[#34D399]15 text-[#34D399] border border-[#34D399]30
+      <!-- CARD 2: DOCTOR WORKSTATION -->
+      <a href="doctor.html" class="group bg-[#0E2127]/80 hover:bg-[#0E2127] border border-[#183B44] hover:border-[#34D399] rounded-3xl p-6 transition-all duration-300 shadow-xl hover:shadow-[#34D399]/15 flex flex-col justify-between space-y-6">
+        <div class="space-y-4">
+          <div class="flex justify-between items-start">
+            <div class="w-14 h-14 bg-[#071317] border border-[#183B44] group-hover:border-[#34D399] rounded-2xl flex items-center justify-center text-[#34D399] text-2xl transition-all">
+              <i class="fa-solid fa-user-doctor"></i>
+            </div>
+            <span class="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-[#34D399]/15 text-[#34D399] border border-[#34D399]/30">
               Clinical
-            span
-          div
+            </span>
+          </div>
 
-          div
-            h3 class=text-lg font-bold text-white group-hovertext-[#34D399] transition-colors
+          <div>
+            <h3 class="text-lg font-bold text-white group-hover:text-[#34D399] transition-colors">
               On-Duty Physician
-            h3
-            p class=text-xs text-slate-400 mt-1
+            </h3>
+            <p class="text-xs text-slate-400 mt-1">
               Physician workstation for emergency attending lock, outpatient review, and rapid discharge.
-            p
-          div
+            </p>
+          </div>
 
-          ul class=space-y-2 text-xs text-slate-300 border-t border-[#183B44] pt-3
-            li class=flex items-center gap-2i class=fa-solid fa-check text-[#34D399]i I Am Attending Code Red Conflict Lockli
-            li class=flex items-center gap-2i class=fa-solid fa-check text-[#34D399]i Zero-Click Central EMR Auto-Ingestionli
-            li class=flex items-center gap-2i class=fa-solid fa-check text-[#34D399]i Editable AI Treatment & Lab Recommendationsli
-            li class=flex items-center gap-2i class=fa-solid fa-check text-[#34D399]i One-Tap Home Discharge to Free Bedsli
-          ul
-        div
+          <ul class="space-y-2 text-xs text-slate-300 border-t border-[#183B44] pt-3">
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-[#34D399]"></i> "I Am Attending" Code Red Conflict Lock</li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-[#34D399]"></i> Zero-Click Central EMR Auto-Ingestion</li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-[#34D399]"></i> Editable AI Treatment & Lab Recommendations</li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-[#34D399]"></i> One-Tap Home Discharge to Free Beds</li>
+          </ul>
+        </div>
 
-        div class=w-full bg-[#0E2127] border border-[#34D399]50 group-hoverbg-[#34D399] text-[#34D399] group-hovertext-slate-950 font-bold text-xs py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg
-          spanLaunch Doctor Stationspan
-          i class=fa-solid fa-arrow-right text-[11px] group-hovertranslate-x-1 transition-transformi
-        div
-      a
+        <div class="w-full bg-[#0E2127] border border-[#34D399]/50 group-hover:bg-[#34D399] text-[#34D399] group-hover:text-slate-950 font-bold text-xs py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg">
+          <span>Launch Doctor Station</span>
+          <i class="fa-solid fa-arrow-right text-[11px] group-hover:translate-x-1 transition-transform"></i>
+        </div>
+      </a>
 
-    div
+    </div>
 
-    !-- SIDE-BY-SIDE EVALUATOR SHORTCUT --
-    div class=mt-8 bg-[#071317] border border-[#183B44] rounded-2xl p-4 w-full max-w-4xl flex flex-col smflex-row justify-between items-center gap-3
-      div class=flex items-center gap-3 text-xs text-slate-300
-        i class=fa-solid fa-window-restore text-[#BAC94A] text-basei
-        spanstrongHackathon Evaluator Shortcutstrong Launch both roles into separate tabs simultaneously to test real-time cross-window sync.span
-      div
-      button onclick=launchDemoBoth() class=bg-[#BAC94A] hoverbg-[#a6b53c] text-slate-950 font-bold text-xs px-4 py-2 rounded-xl transition-all whitespace-nowrap shadow-md
-        i class=fa-solid fa-up-right-from-square mr-1i Open Both in New Tabs
-      button
-    div
+    <!-- SIDE-BY-SIDE EVALUATOR SHORTCUT -->
+    <div class="mt-8 bg-[#071317] border border-[#183B44] rounded-2xl p-4 w-full max-w-4xl flex flex-col sm:flex-row justify-between items-center gap-3">
+      <div class="flex items-center gap-3 text-xs text-slate-300">
+        <i class="fa-solid fa-window-restore text-[#BAC94A] text-base"></i>
+        <span><strong>Hackathon Evaluator Shortcut:</strong> Launch both roles into separate tabs simultaneously to test real-time cross-window sync.</span>
+      </div>
+      <button onclick="launchDemoBoth()" class="bg-[#BAC94A] hover:bg-[#a6b53c] text-slate-950 font-bold text-xs px-4 py-2 rounded-xl transition-all whitespace-nowrap shadow-md">
+        <i class="fa-solid fa-up-right-from-square mr-1"></i> Open Both in New Tabs
+      </button>
+    </div>
 
-  main
+  </main>
 
-  !-- FOOTER --
-  footer class=border-t border-[#183B44] bg-[#071317] py-3 text-center text-xs text-slate-400
-    pSRM Global Hospitals &bull; MedFlow Real-Time Architecturep
-  footer
+  <!-- FOOTER -->
+  <footer class="border-t border-[#183B44] bg-[#071317] py-3 text-center text-xs text-slate-400">
+    <p>SRM Global Hospitals &bull; MedFlow Real-Time Architecture</p>
+  </footer>
 
-  script
+  <script>
     function launchDemoBoth() {
       window.open('manager.html', '_blank');
       window.open('doctor.html', '_blank');
     }
-  script
-body
-html
+  </script>
+</body>
+</html>
