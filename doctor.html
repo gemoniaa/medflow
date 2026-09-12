@@ -466,6 +466,18 @@
     function broadcastToCloud(payload) {
       try { syncChannel.postMessage(payload); } catch(e){}
       try { localStorage.setItem('medflow_cross_tab_event', JSON.stringify(payload)); } catch(e){}
+
+      try {
+        if (window.supabase) {
+          const supabaseDb = window.supabase.createClient("https://etydrijztimnucgmmkgm.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0eWRyaWp6dGltbnVjZ21ta2dtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyMzMxOTMsImV4cCI6MjEwNDgwOTE5M30.XqflZmClgHJx14U-NI-ragLiX60bkSK_HqR_i-JBeNE");
+          
+          if (payload.type === 'CALL_CLAIMED') {
+            supabaseDb.from('emergency_alerts').update({ claimed_by: payload.doctorName }).eq('id', payload.callId).then();
+          } else if (payload.type === 'PATIENT_DISCHARGED') {
+            supabaseDb.from('patients').delete().eq('name', payload.patientName).then();
+          }
+        }
+      } catch (err) {}
     }
 
     function handleIncomingSyncDoctor(data) {

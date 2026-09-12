@@ -138,31 +138,6 @@
           <p class="text-xs text-slate-400">Available: 82 Beds | Surplus Capacity Ready</p>
         </div>
       </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="bg-[#0E2127]/60 border border-[#183B44] rounded-2xl p-5">
-          <h3 class="text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
-            <i class="fa-solid fa-circle-info text-[#5AA7A7]"></i> Core Operations Summary
-          </h3>
-          <ul class="space-y-2 text-xs text-slate-300">
-            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-[#BAC94A]"></i> 24-Hour Acute Care & 6 Surgical Theatres</li>
-            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-[#BAC94A]"></i> Continuous Laboratory & Pathology Diagnostics</li>
-            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-[#BAC94A]"></i> Automated Pharmacy Dispensing & Inventory Tracking</li>
-            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-[#BAC94A]"></i> Dynamic Doctor & Nurse Workload Balancing</li>
-          </ul>
-        </div>
-
-        <div class="bg-[#0E2127]/60 border border-[#183B44] rounded-2xl p-5">
-          <h3 class="text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
-            <i class="fa-solid fa-phone text-[#34D399]"></i> Department Desk Contacts
-          </h3>
-          <div class="space-y-2 text-xs text-slate-300">
-            <div class="flex justify-between p-2 bg-[#071317] rounded-lg border border-[#183B44]"><span>Emergency Desk:</span><span class="font-mono text-[#34D399] font-bold">+91 (044) 4396 9999</span></div>
-            <div class="flex justify-between p-2 bg-[#071317] rounded-lg border border-[#183B44]"><span>Ambulance Control:</span><span class="font-mono text-[#34D399] font-bold">+91 (044) 4396 9911</span></div>
-            <div class="flex justify-between p-2 bg-[#071317] rounded-lg border border-[#183B44]"><span>ICU Control:</span><span class="font-mono text-[#34D399] font-bold">+91 (044) 4396 9944</span></div>
-          </div>
-        </div>
-      </div>
     </section>
 
     <!-- TAB 2: CAPACITY & SHIFT PLANNER -->
@@ -597,6 +572,8 @@
             supabaseDb.from('appointments').insert([{ id: payload.appointment.id, patient_name: payload.appointment.patientName, doctor: payload.appointment.doctor, dept: payload.appointment.dept, date: payload.appointment.date, reason: payload.appointment.reason }]).then();
           } else if (payload.type === 'APPOINTMENT_REMOVED') {
             supabaseDb.from('appointments').delete().eq('id', payload.appointmentId).then();
+          } else if (payload.type === 'PATIENT_DISCHARGED') {
+            supabaseDb.from('patients').delete().eq('name', payload.patientName).then();
           }
         }
       } catch (err) {}
@@ -1001,12 +978,12 @@
       setStore('medflow_patients', patients);
       renderPatients();
 
-      // Broadcast updated patient list so Doctor tab updates discharge list instantly
       broadcastSyncEvent({ type: 'SYNC_PATIENTS', patients: patients });
     }
 
     function removePatient(patientId) {
-      patients = patients.filter(p => p.id !== patientId);
+      const p = patients.find(item => item.id === patientId);
+      patients = patients.filter(item => item.id !== patientId);
       setStore('medflow_patients', patients);
       renderPatients();
 
@@ -1253,7 +1230,13 @@
             if (payload.new.claimed_by) {
               handleIncomingSyncManager({ type: 'CALL_CLAIMED', callId: payload.new.id, doctorName: payload.new.claimed_by });
             }
-          }).subscribe();
+          })
+          .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'patients' }, payload => {
+            if (payload.old && payload.old.name) {
+              handleIncomingSyncManager({ type: 'PATIENT_DISCHARGED', patientName: payload.old.name });
+            }
+          })
+          .subscribe();
       }
     } catch (e) {}
 
