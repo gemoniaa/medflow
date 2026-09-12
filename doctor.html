@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedFlow — Doctor Duty & Emergency Response</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .alarm-flash { animation: alertGlow 1.2s infinite alternate; }
+    @keyframes alertGlow {
+      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); border-color: rgba(239, 68, 68, 0.9); }
+      100% { box-shadow: 0 0 20px 5px rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.3); }
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans">
+
+  <!-- TOP APP BAR -->
+  <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-40">
+    <div class="max-w-md mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 font-bold">
+          <i class="fa-solid fa-user-doctor text-lg"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-sm font-bold text-white">Dr. Rajesh Sharma</h1>
+            <span class="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-semibold">ON DUTY</span>
+          </div>
+          <p class="text-[11px] text-slate-400">Emergency Lead &bull; SRM Global Hospitals</p>
+        </div>
+      </div>
+      <button onclick="simulateIncomingAlarm()" class="text-xs bg-red-500/10 text-red-400 border border-red-500/30 px-2.5 py-1.5 rounded-xl hover:bg-red-500/20 transition-all font-semibold flex items-center gap-1 shadow-inner">
+        <i class="fa-solid fa-bell text-[10px]"></i> Test Alarm
+      </button>
+    </div>
+  </header>
+
+  <!-- POP-UP MODAL: CODE RED EMERGENCY ALARM -->
+  <div id="emergencyAlarmModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center z-50 p-4">
+    <div class="bg-slate-900 border-2 border-red-500 rounded-3xl w-full max-w-sm p-6 space-y-4 alarm-flash text-center shadow-2xl">
+      <div class="w-16 h-16 bg-red-500/20 text-red-500 border border-red-500/40 rounded-full flex items-center justify-center mx-auto text-2xl animate-bounce">
+        <i class="fa-solid fa-heart-pulse"></i>
+      </div>
+      
+      <div>
+        <span class="text-[11px] font-bold uppercase tracking-widest text-red-400 bg-red-500/10 border border-red-500/30 px-3 py-0.5 rounded-full">
+          CODE RED &bull; IMMEDIATE ATTENTION
+        </span>
+        <h3 class="text-xl font-extrabold text-white mt-3" id="modalBed">Trauma Bay ER-02</h3>
+        <p class="text-sm font-bold text-slate-200 mt-1" id="modalPatient">Patient: Arjun Verma (62M)</p>
+        <p class="text-xs text-amber-300 bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 mt-2 font-medium" id="modalSymptoms">
+          Sudden Arrhythmia / BP drop to 70/40 mmHg
+        </p>
+      </div>
+
+      <div class="p-3 bg-slate-950/60 rounded-xl text-[11px] text-slate-400 text-left flex items-start gap-2">
+        <i class="fa-solid fa-shield-halved text-emerald-400 text-sm mt-0.5"></i>
+        <span>Clicking <strong>"I Am Attending"</strong> broadcasts to hospital operations and locks out other doctors so they do not duplicate effort.</span>
+      </div>
+
+      <div class="space-y-2">
+        <button onclick="claimEmergencyResponse()" class="w-full bg-red-600 hover:bg-red-500 text-white font-bold text-sm py-3.5 rounded-2xl shadow-xl shadow-red-900/50 flex items-center justify-center gap-2 transition-all">
+          <i class="fa-solid fa-person-running"></i> I Am Attending This Patient
+        </button>
+        <button onclick="dismissEmergencyModal()" class="w-full bg-slate-800 text-slate-400 text-xs py-2 rounded-xl hover:text-white transition-all">
+          Handover / Unable to Respond
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN MOBILE CONTENT -->
+  <main class="flex-grow max-w-md w-full mx-auto p-4 space-y-5">
+
+    <!-- ACTIVE ATTENDING BANNER -->
+    <div id="activeAttendingBanner" class="hidden p-4 bg-emerald-500/10 border border-emerald-500/40 rounded-2xl text-xs space-y-2 shadow-inner">
+      <div class="flex justify-between items-center">
+        <span class="font-bold text-emerald-300 flex items-center gap-1.5">
+          <i class="fa-solid fa-circle-check"></i> You Are Attending Bedside
+        </span>
+        <span class="text-[10px] text-emerald-400 font-mono">Status: En Route</span>
+      </div>
+      <p class="text-slate-200" id="attendingDetails">Trauma Bay ER-02 &bull; Arjun Verma</p>
+      <div class="text-[10px] text-slate-400 bg-slate-950/60 p-2 rounded-xl flex justify-between items-center">
+        <span>Conflict Locked: Peer doctors notified to hold positions.</span>
+        <button onclick="clearAttendingStatus()" class="text-emerald-400 font-bold hover:underline">Complete</button>
+      </div>
+    </div>
+
+    <!-- MY APPOINTMENTS & AUTOMATED AI CONSULTATION -->
+    <section class="space-y-3" id="appointmentContainer">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+        <div>
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+            <i class="fa-solid fa-calendar-check text-blue-400"></i> My Appointments
+          </h2>
+          <p class="text-[11px] text-slate-400 mt-0.5">Outpatients scheduled for today</p>
+        </div>
+        <span class="text-xs bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded-full font-bold" id="aptCountBadge">2</span>
+      </div>
+
+      <div class="space-y-3" id="doctorAppointmentsList"></div>
+
+      <!-- AI Consultation Area -->
+      <div id="aiConsultationArea" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4 shadow-lg">
+        <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+          <div>
+            <span class="text-[10px] text-blue-400 font-bold uppercase tracking-widest">Active Consultation</span>
+            <h3 class="font-bold text-white text-sm mt-0.5" id="consultPatientName">Patient Name</h3>
+          </div>
+          <button onclick="closeConsultation()" class="text-slate-400 hover:text-white text-xs bg-slate-800 px-2.5 py-1.5 rounded-lg transition-all"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        
+        <div>
+          <div class="flex justify-between items-center mb-1.5">
+            <label class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Live EMR Diagnostic Record</label>
+            <span class="text-[9px] text-emerald-400 font-bold tracking-wider" id="emrSyncStatus">
+              <i class="fa-solid fa-spinner animate-spin mr-1"></i> SYNCING EMR...
+            </span>
+          </div>
+          <textarea id="doctorNotes" readonly rows="3" class="w-full bg-slate-950 border border-emerald-500/30 rounded-xl p-3 text-xs text-emerald-50 focus:outline-none resize-none shadow-inner" placeholder="Fetching patient record from Hospital EMR..."></textarea>
+        </div>
+
+        <!-- AI Output Result Box (Auto-Populated & Fully Editable by Doctor) -->
+        <div id="aiOutputBox" class="hidden bg-slate-950 border border-blue-500/30 rounded-xl p-4 shadow-lg space-y-3">
+          <div class="flex justify-between items-center border-b border-slate-800/80 pb-2">
+            <h4 class="text-[10px] font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+              <i class="fa-solid fa-microchip text-emerald-400"></i> AI Generated Plan
+            </h4>
+            <span class="text-[9px] bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2 py-0.5 rounded font-mono">
+              <i class="fa-solid fa-pen-to-square mr-1"></i> Editable by Doctor
+            </span>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-[9px] text-slate-400 uppercase font-semibold block mb-1">Follow-up Schedule</label>
+              <input type="text" id="aiNextVisitInput" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white font-semibold focus:border-blue-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="text-[9px] text-slate-400 uppercase font-semibold block mb-1">Risk Evaluation</label>
+              <select id="aiRiskSelect" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white font-semibold focus:border-blue-500 focus:outline-none">
+                <option value="Low / Stable">🟢 Low / Stable</option>
+                <option value="Moderate Risk">🟡 Moderate Risk</option>
+                <option value="HIGH RISK">🔴 HIGH RISK</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <label class="text-[9px] text-slate-400 uppercase font-semibold">Prescriptions & Clinical Orders</label>
+              <span class="text-[9px] text-slate-500">Doctor override enabled</span>
+            </div>
+            <textarea id="aiActionInput" rows="3" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-amber-300 font-medium focus:border-blue-500 focus:outline-none resize-none leading-relaxed"></textarea>
+          </div>
+
+          <button onclick="finishConsultation()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-3 rounded-xl mt-2 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/40">
+            <i class="fa-solid fa-check-circle"></i> Save & Sync Custom Plan to EMR
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION: DISCHARGE APPROVALS -->
+    <section class="space-y-3">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+        <div>
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+            <i class="fa-solid fa-file-signature text-emerald-400"></i> Discharge Approvals
+          </h2>
+          <p class="text-[11px] text-slate-400 mt-0.5">Stable inpatients ready for home care</p>
+        </div>
+        <span class="text-xs bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded-full font-bold" id="queueCountBadge">2</span>
+      </div>
+
+      <div class="space-y-3" id="doctorDischargeList"></div>
+    </section>
+
+    <!-- SECTION: SHIFT ASSIGNED DIRECTIVES -->
+    <section class="space-y-3 mb-6">
+      <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 pb-2">Assigned Shift Directives</h3>
+      <div class="space-y-2" id="doctorTasksList">
+        <div class="bg-slate-900 border border-slate-800 p-3 rounded-xl flex justify-between items-center text-xs">
+          <div>
+            <span class="font-bold text-slate-200 block">Trauma Resuscitation Lead</span>
+            <span class="text-slate-400 text-[11px]">Emergency Dept &bull; Shift Ends 10:00 PM</span>
+          </div>
+          <span class="text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-full font-semibold">Active</span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="border-t border-slate-800 bg-slate-900 py-3 px-4 flex justify-between items-center text-xs text-slate-400 mt-auto">
+    <span>Dr. Rajesh Sharma Handset &bull; MedFlow Client</span>
+    <button onclick="resetDocDemoData()" class="text-[11px] text-red-400 hover:text-red-300 underline font-medium">Reset</button>
+  </footer>
+
+  <script>
+    const syncChannel = new BroadcastChannel('medflow_hospital_sync');
+
+    function getStore(key, fallback) {
+      try {
+        const item = localStorage.getItem(key);
+        return item ? JSON.parse(item) : fallback;
+      } catch(e) { return fallback; }
+    }
+    function setStore(key, val) {
+      try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {}
+    }
+
+    let activeAlarmCall = {
+      id: 301,
+      bed: "Trauma Bay ER-02",
+      patient: "Arjun Verma (62M)",
+      symptoms: "Sudden Arrhythmia / BP drop to 70/40 mmHg"
+    };
+
+    const defaultDocAppointments = [
+      { 
+        id: 1, 
+        name: "Karan Mehta", 
+        time: "10:30 AM", 
+        reason: "Cardiology Follow-up",
+        emrData: "[EMR AUTO-PULL: 10:30 AM]\nPatient reports periodic chest tightness and mild palpitations during exertion. BP elevated at 145/92 mmHg. Baseline ECG suggests borderline sinus tachycardia."
+      },
+      { 
+        id: 2, 
+        name: "Anita Rao", 
+        time: "11:15 AM", 
+        reason: "Pulmonology Consult",
+        emrData: "[EMR AUTO-PULL: 11:15 AM]\nPatient presenting with acute wheezing, productive cough, and intermittent fever (101.4°F). SpO2 at 94% on room air. Requires rapid bronchodilator evaluation."
+      }
+    ];
+
+    const defaultDocDischarges = [
+      {
+        id: 101,
+        name: "Meera Deshmukh",
+        age: 70,
+        ward: "Ward C — Bed 08",
+        diagnosis: "Post-Operative Recovery (Cholecystectomy)",
+        vitals: "Stable &bull; BP 122/78 &bull; SpO2 99%",
+        homeKit: "Digital Pulse Oximeter + Daily BP Logger",
+        meds: "Cefixime 200mg (Oral), Paracetamol 650mg"
+      },
+      {
+        id: 102,
+        name: "Suresh Pillai",
+        age: 42,
+        ward: "Outpatient Observation — Bed 03",
+        diagnosis: "Minor Laceration Cleaned & Sutured",
+        vitals: "Normal &bull; BP 118/76 &bull; Ambulatory",
+        homeKit: "Wound Dressing Kit + 4-day OPD review slip",
+        meds: "Amoxicillin-Clav 625mg, Ibuprofen 400mg"
+      }
+    ];
+
+    let myAppointments = getStore('medflow_doc_appointments', defaultDocAppointments);
+    let dischargePatients = getStore('medflow_doc_discharge', defaultDocDischarges);
+    let currentConsultationId = null;
+
+    function renderAppointments() {
+      const list = document.getElementById('doctorAppointmentsList');
+      list.innerHTML = '';
+      document.getElementById('aptCountBadge').innerText = myAppointments.length;
+
+      if (myAppointments.length === 0) {
+        list.innerHTML = `
+          <div class="p-4 text-center text-slate-500 bg-slate-900/40 rounded-2xl border border-slate-800">
+            <i class="fa-solid fa-check-circle text-xl text-blue-400 mb-2"></i>
+            <p class="text-xs font-medium text-slate-300">No more appointments scheduled today.</p>
+          </div>
+        `;
+        return;
+      }
+
+      myAppointments.forEach(apt => {
+        list.innerHTML += `
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex justify-between items-center shadow-sm">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-slate-950 border border-slate-800 flex items-center justify-center text-slate-400 font-bold text-xs">
+                ${apt.time}
+              </div>
+              <div>
+                <h4 class="font-bold text-white text-sm">${apt.name}</h4>
+                <p class="text-[10px] text-slate-400">${apt.reason}</p>
+              </div>
+            </div>
+            <button onclick="startConsultation(${apt.id}, '${apt.name}')" class="bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold px-3 py-2 rounded-lg transition-all flex items-center gap-1.5 shadow">
+              <i class="fa-solid fa-brain text-cyan-300 text-[11px]"></i> Consult <span class="bg-blue-800 text-[9px] px-1 py-0.5 rounded text-blue-200">AI</span>
+            </button>
+          </div>
+        `;
+      });
+    }
+
+    function startConsultation(id, name) {
+      currentConsultationId = id;
+      const patient = myAppointments.find(p => p.id === id);
+
+      document.getElementById('doctorAppointmentsList').classList.add('hidden');
+      document.getElementById('aiConsultationArea').classList.remove('hidden');
+      document.getElementById('consultPatientName').innerText = name;
+      
+      const notesBox = document.getElementById('doctorNotes');
+      const syncStatus = document.getElementById('emrSyncStatus');
+      const outputBox = document.getElementById('aiOutputBox');
+      
+      outputBox.classList.add('hidden');
+      notesBox.value = "Streaming authenticated records from Hospital EMR repository...";
+      notesBox.classList.add('text-slate-500', 'animate-pulse');
+      syncStatus.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> SYNCING EMR...`;
+
+      setTimeout(() => {
+        notesBox.value = patient.emrData.replace("\\n", "\n");
+        notesBox.classList.remove('text-slate-500', 'animate-pulse');
+        syncStatus.innerHTML = `<i class="fa-solid fa-brain text-purple-400 mr-1"></i> AI INFERRING PLAN...`;
+
+        setTimeout(() => {
+          autoExecuteAIAnalysis(patient.emrData);
+          syncStatus.innerHTML = `<i class="fa-solid fa-check-double text-emerald-400 mr-1"></i> EMR SYNCED &bull; EDITABLE`;
+        }, 700);
+
+      }, 800);
+    }
+
+    function autoExecuteAIAnalysis(notesText) {
+      const outputBox = document.getElementById('aiOutputBox');
+      const notes = (notesText || '').toLowerCase();
+
+      let nextVisit = "In 30 Days";
+      let riskLevel = "Low / Stable";
+      let action = "Condition stable. Continue current outpatient medications. No urgent labs indicated.";
+
+      if (notes.includes('fever') || notes.includes('infection') || notes.includes('cough') || notes.includes('wheez')) {
+        nextVisit = "In 4 Days";
+        riskLevel = "Moderate Risk";
+        action = "Prescribe targeted bronchodilator & oral antibiotics. Order Complete Blood Count (CBC) and Chest Radiograph.";
+      } 
+      
+      if (notes.includes('pain') || notes.includes('tightness') || notes.includes('chest') || notes.includes('palpitation') || notes.includes('severe')) {
+        nextVisit = "Within 24 Hours";
+        riskLevel = "HIGH RISK";
+        action = "Schedule urgent 12-lead ECG, Troponin-I biomarkers, and continuous telemetry monitoring before discharge.";
+      }
+
+      document.getElementById('aiNextVisitInput').value = nextVisit;
+      document.getElementById('aiRiskSelect').value = riskLevel;
+      document.getElementById('aiActionInput').value = action;
+
+      outputBox.classList.remove('hidden');
+    }
+
+    function closeConsultation() {
+      document.getElementById('aiConsultationArea').classList.add('hidden');
+      document.getElementById('doctorAppointmentsList').classList.remove('hidden');
+    }
+
+    function finishConsultation() {
+      myAppointments = myAppointments.filter(a => a.id !== currentConsultationId);
+      setStore('medflow_doc_appointments', myAppointments);
+      renderAppointments();
+      closeConsultation();
+    }
+
+    function renderDischargeList() {
+      const container = document.getElementById('doctorDischargeList');
+      container.innerHTML = '';
+      document.getElementById('queueCountBadge').innerText = dischargePatients.length;
+
+      if (dischargePatients.length === 0) {
+        container.innerHTML = `
+          <div class="p-6 text-center text-slate-500 bg-slate-900/40 rounded-2xl border border-slate-800">
+            <i class="fa-solid fa-circle-check text-2xl text-emerald-400 mb-2"></i>
+            <p class="text-xs font-bold text-slate-300">All Recommended Discharges Approved</p>
+            <p class="text-[11px] text-slate-500">Hospital beds have been freed for emergency incoming.</p>
+          </div>
+        `;
+        return;
+      }
+
+      dischargePatients.forEach(p => {
+        container.innerHTML += `
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-md">
+            <div class="flex justify-between items-start">
+              <div>
+                <h4 class="font-bold text-white text-sm">${p.name} <span class="text-slate-400 font-normal text-xs">(${p.age}y)</span></h4>
+                <p class="text-[11px] text-slate-400">${p.ward}</p>
+              </div>
+              <span class="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-semibold">Ready for Home Care</span>
+            </div>
+
+            <div class="text-xs bg-slate-950 p-2.5 rounded-xl border border-slate-800/80 space-y-1">
+              <span class="text-slate-400 block text-[10px] uppercase font-semibold">Diagnosis & Vitals:</span>
+              <p class="text-slate-200 font-medium">${p.diagnosis}</p>
+              <p class="text-emerald-400 text-[11px] font-mono">${p.vitals}</p>
+            </div>
+
+            <div class="text-[11px] text-slate-300">
+              <p><i class="fa-solid fa-pills text-purple-400 mr-1"></i> ${p.meds}</p>
+              <p class="mt-0.5"><i class="fa-solid fa-kit-medical text-emerald-400 mr-1"></i> ${p.homeKit}</p>
+            </div>
+
+            <button onclick="approveDischarge(${p.id})" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2.5 rounded-xl transition-all shadow-lg shadow-emerald-900/30 flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-check-double"></i> Authorize Home Discharge & Free Bed
+            </button>
+          </div>
+        `;
+      });
+    }
+
+    function approveDischarge(id) {
+      const p = dischargePatients.find(item => item.id === id);
+      if (!p) return;
+
+      dischargePatients = dischargePatients.filter(item => item.id !== id);
+      setStore('medflow_doc_discharge', dischargePatients);
+      renderDischargeList();
+
+      syncChannel.postMessage({ type: 'PATIENT_DISCHARGED', patientName: p.name });
+    }
+
+    function simulateIncomingAlarm() {
+      document.getElementById('emergencyAlarmModal').classList.remove('hidden');
+      playBeep();
+    }
+
+    function dismissEmergencyModal() {
+      document.getElementById('emergencyAlarmModal').classList.add('hidden');
+    }
+
+    function claimEmergencyResponse() {
+      dismissEmergencyModal();
+      
+      const banner = document.getElementById('activeAttendingBanner');
+      banner.classList.remove('hidden');
+      document.getElementById('attendingDetails').innerText = `${activeAlarmCall.bed} • ${activeAlarmCall.patient}`;
+
+      syncChannel.postMessage({
+        type: 'CALL_CLAIMED',
+        callId: activeAlarmCall.id,
+        doctorName: "Dr. Rajesh Sharma (Lead Physician)"
+      });
+    }
+
+    function clearAttendingStatus() {
+      document.getElementById('activeAttendingBanner').classList.add('hidden');
+    }
+
+    function playBeep() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.value = 880;
+        osc.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.3);
+      } catch (e) {}
+    }
+
+    syncChannel.onmessage = (event) => {
+      if (event.data.type === 'EMERGENCY_ALARM_TRIGGERED') {
+        activeAlarmCall = {
+          id: event.data.call.id,
+          bed: event.data.call.bed,
+          patient: event.data.call.patientName,
+          symptoms: event.data.call.condition
+        };
+        document.getElementById('modalBed').innerText = activeAlarmCall.bed;
+        document.getElementById('modalPatient').innerText = `Patient: ${activeAlarmCall.patient}`;
+        document.getElementById('modalSymptoms').innerText = activeAlarmCall.symptoms;
+        simulateIncomingAlarm();
+      }
+
+      if (event.data.type === 'NEW_APPOINTMENT') {
+        const apt = event.data.appointment;
+        myAppointments.unshift({
+          id: apt.id,
+          name: apt.patientName,
+          time: "Just Now",
+          reason: apt.reason,
+          emrData: `[EMR AUTO-PULL: Live Sync]\nPatient: ${apt.patientName}. Assigned: ${apt.doctor}. Department: ${apt.dept}. Reason for consult: ${apt.reason}. Vitals normal at triage desk.`
+        });
+        setStore('medflow_doc_appointments', myAppointments);
+        renderAppointments();
+      }
+    };
+
+    function resetDocDemoData() {
+      localStorage.removeItem('medflow_doc_appointments');
+      localStorage.removeItem('medflow_doc_discharge');
+      location.reload();
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      renderDischargeList();
+      renderAppointments();
+    });
+  </script>
+</body>
+</html>
