@@ -6,6 +6,7 @@
   <title>SRM Global Hospitals — Operations & Resource Management</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -39,8 +40,7 @@
     <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col xl:flex-row justify-between items-center gap-4">
       <div class="flex items-center space-x-3">
         <div class="h-11 w-11 bg-[#0E2127] border border-[#183B44] rounded-xl overflow-hidden flex items-center justify-center p-1.5 shadow-inner">
-          <img src="C:\Users\riku1\OneDrive\Desktop\HOSPITAL\FILES\logo.png" alt="Logo" class="h-full w-full object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-          <i class="fa-solid fa-heart-pulse text-2xl text-[#5AA7A7] hidden"></i>
+          <i class="fa-solid fa-heart-pulse text-2xl text-[#5AA7A7]"></i>
         </div>
         <div>
           <h1 class="text-lg font-bold text-white flex items-center gap-2">
@@ -84,9 +84,8 @@
       <div class="bg-[#0E2127]/70 border border-[#183B44] rounded-2xl p-6 relative overflow-hidden">
         <div class="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
           <div class="flex items-center space-x-5">
-            <div class="w-20 h-20 bg-[#071317] border border-[#183B44] rounded-2xl flex items-center justify-center p-2.5 shadow-inner overflow-hidden">
-              <img src="C:\Users\riku1\OneDrive\Desktop\HOSPITAL\FILES\LOGO.png" alt="SRM Logo" class="h-full w-full object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-              <i class="fa-solid fa-square-h text-3xl text-[#5AA7A7] hidden"></i>
+            <div class="w-20 h-20 bg-[#071317] border border-[#183B44] rounded-2xl flex items-center justify-center p-2.5 shadow-inner">
+              <i class="fa-solid fa-square-h text-3xl text-[#5AA7A7]"></i>
             </div>
             <div>
               <h2 class="text-2xl font-bold text-white tracking-wide">SRM Global Hospitals</h2>
@@ -260,7 +259,6 @@
                 <p class="text-xs text-slate-400">Assigned doctors and nurses, work instructions, and real-time execution status</p>
               </div>
               <div class="flex items-center gap-2">
-                <!-- CLEAR ROSTER BUTTON -->
                 <button id="clearRosterBtn" onclick="clearStaffRoster()" class="hidden text-[11px] bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 px-2.5 py-1 rounded-lg transition-all font-semibold flex items-center gap-1.5">
                   <i class="fa-solid fa-trash-can text-[10px]"></i> Clear Roster
                 </button>
@@ -418,7 +416,7 @@
       </div>
     </section>
 
-    <!-- TAB 5: APPOINTMENTS DESK (WITH DELETE / CANCEL ACTION) -->
+    <!-- TAB 5: APPOINTMENTS DESK -->
     <section id="tab5" class="tab-content hidden space-y-6">
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#0E2127]/70 border border-[#183B44] p-4 rounded-2xl">
         <div>
@@ -463,7 +461,7 @@
 
   </main>
 
-  <!-- Patient Registration Modal (TAB 3) -->
+  <!-- Patient Registration Modal -->
   <div id="patientModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
     <div class="bg-[#0E2127] border border-[#183B44] rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl">
       <div class="flex justify-between items-center border-b border-[#183B44] pb-3">
@@ -510,7 +508,7 @@
     </div>
   </div>
 
-  <!-- SMART AUTO-ROUTING APPOINTMENT MODAL (TAB 5) -->
+  <!-- Appointment Modal -->
   <div id="appointmentModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
     <div class="bg-[#0E2127] border border-[#183B44] rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl">
       <div class="flex justify-between items-center border-b border-[#183B44] pb-3">
@@ -582,9 +580,27 @@
     </button>
   </footer>
 
-  <!-- App Logic & Cross-Tab Persistence -->
   <script>
     const syncChannel = new BroadcastChannel('medflow_hospital_sync');
+
+    function broadcastSyncEvent(payload) {
+      payload._ts = Date.now() + Math.random();
+      try { syncChannel.postMessage(payload); } catch(e){}
+      try { localStorage.setItem('medflow_cross_tab_event', JSON.stringify(payload)); } catch(e){}
+      
+      try {
+        if (window.supabase) {
+          const supabaseDb = window.supabase.createClient("https://etydrijztimnucgmmkgm.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0eWRyaWp6dGltbnVjZ21ta2dtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyMzMxOTMsImV4cCI6MjEwNDgwOTE5M30.XqflZmClgHJx14U-NI-ragLiX60bkSK_HqR_i-JBeNE");
+          if (payload.type === 'EMERGENCY_ALARM_TRIGGERED') {
+            supabaseDb.from('emergency_alerts').insert([{ id: payload.call.id, title: "Code Red", bed: payload.call.bed, patient_name: payload.call.patientName, symptoms: payload.call.condition }]).then();
+          } else if (payload.type === 'NEW_APPOINTMENT') {
+            supabaseDb.from('appointments').insert([{ id: payload.appointment.id, patient_name: payload.appointment.patientName, doctor: payload.appointment.doctor, dept: payload.appointment.dept, date: payload.appointment.date, reason: payload.appointment.reason }]).then();
+          } else if (payload.type === 'APPOINTMENT_REMOVED') {
+            supabaseDb.from('appointments').delete().eq('id', payload.appointmentId).then();
+          }
+        }
+      } catch (err) {}
+    }
 
     function getStore(key, fallback) {
       try {
@@ -661,7 +677,7 @@
     function switchTab(tabId) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
       document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('bg-[#5AA7A7]', 'text-white', 'shadow-md');
+        btn.classList.remove('bg-[#5AA7A7]', 'text-white', 'shadow-md', 'shadow-[#5AA7A7]/30');
         btn.classList.add('text-slate-300');
       });
       document.getElementById(tabId).classList.remove('hidden');
@@ -678,7 +694,6 @@
       renderStaffAssignments();
     }
 
-    // CLEAR DUTY ROSTER FUNCTION
     function clearStaffRoster() {
       activeTimers.forEach(t => clearTimeout(t));
       activeTimers = [];
@@ -721,7 +736,6 @@
         return;
       }
 
-      // If tasks exist, show the Clear Roster button
       if (clearBtn) clearBtn.classList.remove('hidden');
 
       let inProgress = 0, completed = 0;
@@ -866,7 +880,6 @@
       document.getElementById('stableCount').innerText = sCount;
     }
 
-    // RENDER APPOINTMENTS TABLE WITH REMOVE / CANCEL BUTTON
     function renderAppointments() {
       const tbody = document.getElementById('globalAppointmentsBody');
       if (!tbody) return;
@@ -905,15 +918,13 @@
       });
     }
 
-    // REMOVE APPOINTMENT FUNCTION
     function removeAppointment(id) {
       const removedApt = appointments.find(a => a.id === id);
       appointments = appointments.filter(a => a.id !== id);
       setStore('medflow_appointments', appointments);
       renderAppointments();
 
-      // Broadcast removal to Doctor Interface
-      syncChannel.postMessage({
+      broadcastSyncEvent({
         type: 'APPOINTMENT_REMOVED',
         appointmentId: id,
         patientName: removedApt ? removedApt.patientName : ''
@@ -975,7 +986,7 @@
       closeAppointmentModal();
       document.getElementById('appointmentForm').reset();
 
-      syncChannel.postMessage({
+      broadcastSyncEvent({
         type: 'NEW_APPOINTMENT',
         appointment: newApt
       });
@@ -989,12 +1000,17 @@
       else p.risk = 'critical';
       setStore('medflow_patients', patients);
       renderPatients();
+
+      // Broadcast updated patient list so Doctor tab updates discharge list instantly
+      broadcastSyncEvent({ type: 'SYNC_PATIENTS', patients: patients });
     }
 
     function removePatient(patientId) {
       patients = patients.filter(p => p.id !== patientId);
       setStore('medflow_patients', patients);
       renderPatients();
+
+      broadcastSyncEvent({ type: 'SYNC_PATIENTS', patients: patients });
     }
 
     function openPatientModal() { document.getElementById('patientModal').classList.remove('hidden'); }
@@ -1016,6 +1032,8 @@
       renderPatients();
       closePatientModal();
       document.getElementById('patientForm').reset();
+
+      broadcastSyncEvent({ type: 'SYNC_PATIENTS', patients: patients });
     }
 
     function renderAlarmsAndRecommendations() {
@@ -1099,7 +1117,7 @@
       document.getElementById('globalAlarmText').innerText = `URGENT BROADCAST: ${title.toUpperCase()} - ${desc.toUpperCase()}`;
       document.getElementById('alarmBadge').classList.remove('hidden');
 
-      syncChannel.postMessage({
+      broadcastSyncEvent({
         type: 'EMERGENCY_ALARM_TRIGGERED',
         call: {
           id: newAlarm.id,
@@ -1196,9 +1214,11 @@
       });
     });
 
-    syncChannel.onmessage = (event) => {
-      if (event.data.type === 'PATIENT_DISCHARGED') {
-        const dischargedName = event.data.patientName;
+    function handleIncomingSyncManager(data) {
+      if (!data || !data.type) return;
+
+      if (data.type === 'PATIENT_DISCHARGED') {
+        const dischargedName = data.patientName;
         patients = patients.filter(p => p.name !== dischargedName);
         setStore('medflow_patients', patients);
         renderPatients();
@@ -1209,23 +1229,37 @@
         document.getElementById('bedBar').style.width = Math.max(5, 100 - newCount) + '%';
       }
 
-      if (event.data.type === 'CALL_CLAIMED') {
+      if (data.type === 'CALL_CLAIMED') {
         const banner = document.getElementById('globalAlarmBanner');
         const text = document.getElementById('globalAlarmText');
         banner.className = "bg-emerald-600 text-white py-2.5 px-4 text-center font-bold text-xs uppercase tracking-wide flex justify-between items-center z-50 shadow-lg";
-        text.innerHTML = `<i class="fa-solid fa-lock text-sm mr-2"></i> ${event.data.callId ? 'CALL #' + event.data.callId : 'ER EMERGENCY'} LOCKED &bull; BED ATTENDED BY ${event.data.doctorName.toUpperCase()}`;
+        text.innerHTML = `<i class="fa-solid fa-lock text-sm mr-2"></i> ${data.callId ? 'CALL #' + data.callId : 'ER EMERGENCY'} LOCKED &bull; BED ATTENDED BY ${data.doctorName.toUpperCase()}`;
         document.getElementById('alarmBadge').classList.add('hidden');
       }
-    };
+    }
+
+    syncChannel.onmessage = (event) => handleIncomingSyncManager(event.data);
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'medflow_cross_tab_event' && event.newValue) {
+        try { handleIncomingSyncManager(JSON.parse(event.newValue)); } catch(e){}
+      }
+    });
+
+    try {
+      if (window.supabase) {
+        const supabaseDb = window.supabase.createClient("https://etydrijztimnucgmmkgm.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0eWRyaWp6dGltbnVjZ21ta2dtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyMzMxOTMsImV4cCI6MjEwNDgwOTE5M30.XqflZmClgHJx14U-NI-ragLiX60bkSK_HqR_i-JBeNE");
+        supabaseDb.channel('manager-sync-channel')
+          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'emergency_alerts' }, payload => {
+            if (payload.new.claimed_by) {
+              handleIncomingSyncManager({ type: 'CALL_CLAIMED', callId: payload.new.id, doctorName: payload.new.claimed_by });
+            }
+          }).subscribe();
+      }
+    } catch (e) {}
 
     function resetAllDemoData() {
       if (confirm("Reset all hospital demo data back to default initial state?")) {
-        localStorage.removeItem('medflow_patients');
-        localStorage.removeItem('medflow_appointments');
-        localStorage.removeItem('medflow_alarms');
-        localStorage.removeItem('medflow_staff');
-        localStorage.removeItem('medflow_doc_appointments');
-        localStorage.removeItem('medflow_doc_discharge');
+        localStorage.clear();
         location.reload();
       }
     }

@@ -4,12 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MedFlow — Doctor Duty & Emergency Response</title>
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Supabase Library -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
     body { font-family: 'Inter', sans-serif; }
-    .alarm-flash { animation: alertGlow 1.2s infinite alternate; }
+    .alarm-flash {
+      animation: alertGlow 1.2s infinite alternate;
+    }
     @keyframes alertGlow {
       0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); border-color: rgba(239, 68, 68, 0.9); }
       100% { box-shadow: 0 0 20px 5px rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.3); }
@@ -18,7 +24,7 @@
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans">
 
-  <!-- TOP APP BAR -->
+  <!-- TOP BAR -->
   <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-40">
     <div class="max-w-md mx-auto px-4 py-3 flex justify-between items-center">
       <div class="flex items-center space-x-3">
@@ -27,7 +33,7 @@
         </div>
         <div>
           <div class="flex items-center gap-2">
-            <h1 class="text-sm font-bold text-white">Dr. Rajesh Sharma</h1>
+            <h1 class="text-sm font-bold text-white">Dr. Arvind Swaminathan</h1>
             <span class="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-semibold">ON DUTY</span>
           </div>
           <p class="text-[11px] text-slate-400">Emergency Lead &bull; SRM Global Hospitals</p>
@@ -39,7 +45,7 @@
     </div>
   </header>
 
-  <!-- POP-UP MODAL: CODE RED EMERGENCY ALARM -->
+  <!-- POP-UP MODAL: INCOMING EMERGENCY ALARM (The Attending Lock Feature) -->
   <div id="emergencyAlarmModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center z-50 p-4">
     <div class="bg-slate-900 border-2 border-red-500 rounded-3xl w-full max-w-sm p-6 space-y-4 alarm-flash text-center shadow-2xl">
       <div class="w-16 h-16 bg-red-500/20 text-red-500 border border-red-500/40 rounded-full flex items-center justify-center mx-auto text-2xl animate-bounce">
@@ -76,7 +82,7 @@
   <!-- MAIN MOBILE CONTENT -->
   <main class="flex-grow max-w-md w-full mx-auto p-4 space-y-5">
 
-    <!-- ACTIVE ATTENDING BANNER -->
+    <!-- ACTIVE ATTENDING STATUS BANNER -->
     <div id="activeAttendingBanner" class="hidden p-4 bg-emerald-500/10 border border-emerald-500/40 rounded-2xl text-xs space-y-2 shadow-inner">
       <div class="flex justify-between items-center">
         <span class="font-bold text-emerald-300 flex items-center gap-1.5">
@@ -103,9 +109,12 @@
         <span class="text-xs bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded-full font-bold" id="aptCountBadge">2</span>
       </div>
 
-      <div class="space-y-3" id="doctorAppointmentsList"></div>
+      <!-- List of Appointments -->
+      <div class="space-y-3" id="doctorAppointmentsList">
+        <!-- Rendered via JS -->
+      </div>
 
-      <!-- AI Consultation Area -->
+      <!-- AI Consultation Area (Auto-triggered upon opening) -->
       <div id="aiConsultationArea" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4 shadow-lg">
         <div class="flex justify-between items-center border-b border-slate-800 pb-3">
           <div>
@@ -178,10 +187,12 @@
         <span class="text-xs bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded-full font-bold" id="queueCountBadge">2</span>
       </div>
 
-      <div class="space-y-3" id="doctorDischargeList"></div>
+      <div class="space-y-3" id="doctorDischargeList">
+        <!-- Injected via JS -->
+      </div>
     </section>
 
-    <!-- SECTION: SHIFT ASSIGNED DIRECTIVES -->
+    <!-- SECTION: SHIFT ASSIGNED DUTIES -->
     <section class="space-y-3 mb-6">
       <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 pb-2">Assigned Shift Directives</h3>
       <div class="space-y-2" id="doctorTasksList">
@@ -196,11 +207,6 @@
     </section>
 
   </main>
-
-  <footer class="border-t border-slate-800 bg-slate-900 py-3 px-4 flex justify-between items-center text-xs text-slate-400 mt-auto">
-    <span>Dr. Rajesh Sharma Handset &bull; MedFlow Client</span>
-    <button onclick="resetDocDemoData()" class="text-[11px] text-red-400 hover:text-red-300 underline font-medium">Reset</button>
-  </footer>
 
   <script>
     const syncChannel = new BroadcastChannel('medflow_hospital_sync');
@@ -222,48 +228,37 @@
       symptoms: "Sudden Arrhythmia / BP drop to 70/40 mmHg"
     };
 
-    const defaultDocAppointments = [
-      { 
-        id: 1, 
-        name: "Karan Mehta", 
-        time: "10:30 AM", 
-        reason: "Cardiology Follow-up",
-        emrData: "[EMR AUTO-PULL: 10:30 AM]\nPatient reports periodic chest tightness and mild palpitations during exertion. BP elevated at 145/92 mmHg. Baseline ECG suggests borderline sinus tachycardia."
-      },
-      { 
-        id: 2, 
-        name: "Anita Rao", 
-        time: "11:15 AM", 
-        reason: "Pulmonology Consult",
-        emrData: "[EMR AUTO-PULL: 11:15 AM]\nPatient presenting with acute wheezing, productive cough, and intermittent fever (101.4°F). SpO2 at 94% on room air. Requires rapid bronchodilator evaluation."
-      }
+    const defaultPatients = [
+      { id: 1, name: "Arjun Verma", age: 62, risk: "critical", ward: "Emergency Room", condition: "Severe Cardiac Trauma", doctor: "Dr. Arvind Swaminathan" },
+      { id: 2, name: "Ananya Sen", age: 34, risk: "critical", ward: "ICU Ward A", condition: "Acute Respiratory Distress", doctor: "Dr. Priya Nair" },
+      { id: 3, name: "Rohan Kulkarni", age: 51, risk: "assistance", ward: "General Ward B", condition: "Post-Op Surgery Monitoring", doctor: "Dr. Amit Mukherjee" },
+      { id: 4, name: "Sneha Reddy", age: 28, risk: "assistance", ward: "Emergency Room", condition: "Moderate Concussion", doctor: "Dr. Sunita Rao" },
+      { id: 5, name: "Meera Deshmukh", age: 70, risk: "stable", ward: "General Ward C", condition: "Recovering - Cleared for Home Meds", doctor: "Dr. Kavita Iyer" },
+      { id: 6, name: "Suresh Pillai", age: 42, risk: "stable", ward: "Outpatient Ward", condition: "Minor Injury - Ready for Home Care", doctor: "Dr. Kavita Iyer" }
     ];
 
-    const defaultDocDischarges = [
-      {
-        id: 101,
-        name: "Meera Deshmukh",
-        age: 70,
-        ward: "Ward C — Bed 08",
-        diagnosis: "Post-Operative Recovery (Cholecystectomy)",
-        vitals: "Stable &bull; BP 122/78 &bull; SpO2 99%",
-        homeKit: "Digital Pulse Oximeter + Daily BP Logger",
-        meds: "Cefixime 200mg (Oral), Paracetamol 650mg"
-      },
-      {
-        id: 102,
-        name: "Suresh Pillai",
-        age: 42,
-        ward: "Outpatient Observation — Bed 03",
-        diagnosis: "Minor Laceration Cleaned & Sutured",
-        vitals: "Normal &bull; BP 118/76 &bull; Ambulatory",
-        homeKit: "Wound Dressing Kit + 4-day OPD review slip",
-        meds: "Amoxicillin-Clav 625mg, Ibuprofen 400mg"
-      }
+    let allPatients = getStore('medflow_patients', defaultPatients);
+
+    function mapStablePatients(patientArray) {
+      return patientArray.filter(p => p.risk === 'stable').map(p => ({
+        id: p.id,
+        name: p.name,
+        age: p.age || 45,
+        ward: p.ward || "General Ward",
+        diagnosis: p.condition || "Recovering - Ready for Home",
+        vitals: "Stable &bull; Vitals Normal &bull; Ambulatory",
+        homeKit: "Standard Recovery Kit + Daily Log",
+        meds: "Continue prescribed oral medications"
+      }));
+    }
+
+    const defaultDocAppointments = [
+      { id: 1, name: "Karan Mehta", time: "10:30 AM", reason: "Cardiology Follow-up", emrData: "[EMR AUTO-PULL: 10:30 AM]\nPatient reports periodic chest tightness and mild palpitations during exertion. BP elevated at 145/92 mmHg. Baseline ECG suggests borderline sinus tachycardia." },
+      { id: 2, name: "Anita Rao", time: "11:15 AM", reason: "Pulmonology Consult", emrData: "[EMR AUTO-PULL: 11:15 AM]\nPatient presenting with acute wheezing, productive cough, and intermittent fever (101.4°F). SpO2 at 94% on room air. Requires rapid bronchodilator evaluation." }
     ];
 
     let myAppointments = getStore('medflow_doc_appointments', defaultDocAppointments);
-    let dischargePatients = getStore('medflow_doc_discharge', defaultDocDischarges);
+    let dischargePatients = mapStablePatients(allPatients);
     let currentConsultationId = null;
 
     function renderAppointments() {
@@ -319,12 +314,12 @@
       syncStatus.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> SYNCING EMR...`;
 
       setTimeout(() => {
-        notesBox.value = patient.emrData.replace("\\n", "\n");
+        notesBox.value = patient ? patient.emrData.replace("\\n", "\n") : "Standard patient record loaded.";
         notesBox.classList.remove('text-slate-500', 'animate-pulse');
         syncStatus.innerHTML = `<i class="fa-solid fa-brain text-purple-400 mr-1"></i> AI INFERRING PLAN...`;
 
         setTimeout(() => {
-          autoExecuteAIAnalysis(patient.emrData);
+          autoExecuteAIAnalysis(patient ? patient.emrData : '');
           syncStatus.innerHTML = `<i class="fa-solid fa-check-double text-emerald-400 mr-1"></i> EMR SYNCED &bull; EDITABLE`;
         }, 700);
 
@@ -372,6 +367,7 @@
 
     function renderDischargeList() {
       const container = document.getElementById('doctorDischargeList');
+      if (!container) return;
       container.innerHTML = '';
       document.getElementById('queueCountBadge').innerText = dischargePatients.length;
 
@@ -421,10 +417,11 @@
       if (!p) return;
 
       dischargePatients = dischargePatients.filter(item => item.id !== id);
-      setStore('medflow_doc_discharge', dischargePatients);
+      allPatients = allPatients.filter(item => item.id !== id);
+      setStore('medflow_patients', allPatients);
       renderDischargeList();
 
-      syncChannel.postMessage({ type: 'PATIENT_DISCHARGED', patientName: p.name });
+      broadcastToCloud({ type: 'PATIENT_DISCHARGED', patientName: p.name });
     }
 
     function simulateIncomingAlarm() {
@@ -443,10 +440,10 @@
       banner.classList.remove('hidden');
       document.getElementById('attendingDetails').innerText = `${activeAlarmCall.bed} • ${activeAlarmCall.patient}`;
 
-      syncChannel.postMessage({
+      broadcastToCloud({
         type: 'CALL_CLAIMED',
         callId: activeAlarmCall.id,
-        doctorName: "Dr. Rajesh Sharma (Lead Physician)"
+        doctorName: "Dr. Arvind Swaminathan (Lead Physician)"
       });
     }
 
@@ -466,13 +463,20 @@
       } catch (e) {}
     }
 
-    syncChannel.onmessage = (event) => {
-      if (event.data.type === 'EMERGENCY_ALARM_TRIGGERED') {
+    function broadcastToCloud(payload) {
+      try { syncChannel.postMessage(payload); } catch(e){}
+      try { localStorage.setItem('medflow_cross_tab_event', JSON.stringify(payload)); } catch(e){}
+    }
+
+    function handleIncomingSyncDoctor(data) {
+      if (!data || !data.type) return;
+
+      if (data.type === 'EMERGENCY_ALARM_TRIGGERED') {
         activeAlarmCall = {
-          id: event.data.call.id,
-          bed: event.data.call.bed,
-          patient: event.data.call.patientName,
-          symptoms: event.data.call.condition
+          id: data.call.id,
+          bed: data.call.bed,
+          patient: data.call.patientName,
+          symptoms: data.call.condition
         };
         document.getElementById('modalBed').innerText = activeAlarmCall.bed;
         document.getElementById('modalPatient').innerText = `Patient: ${activeAlarmCall.patient}`;
@@ -480,25 +484,62 @@
         simulateIncomingAlarm();
       }
 
-      if (event.data.type === 'NEW_APPOINTMENT') {
-        const apt = event.data.appointment;
+      if (data.type === 'SYNC_PATIENTS') {
+        allPatients = data.patients;
+        setStore('medflow_patients', allPatients);
+        dischargePatients = mapStablePatients(allPatients);
+        renderDischargeList();
+      }
+
+      if (data.type === 'NEW_APPOINTMENT') {
+        const apt = data.appointment;
         myAppointments.unshift({
           id: apt.id,
           name: apt.patientName,
           time: "Just Now",
           reason: apt.reason,
-          emrData: `[EMR AUTO-PULL: Live Sync]\nPatient: ${apt.patientName}. Assigned: ${apt.doctor}. Department: ${apt.dept}. Reason for consult: ${apt.reason}. Vitals normal at triage desk.`
+          emrData: `[EMR AUTO-PULL: Live Sync]\nPatient: ${apt.patientName}. Assigned: ${apt.doctor}. Department: ${apt.dept}. Reason for consult: ${apt.reason}. Triage status clear.`
         });
         setStore('medflow_doc_appointments', myAppointments);
         renderAppointments();
       }
-    };
 
-    function resetDocDemoData() {
-      localStorage.removeItem('medflow_doc_appointments');
-      localStorage.removeItem('medflow_doc_discharge');
-      location.reload();
+      if (data.type === 'APPOINTMENT_REMOVED') {
+        myAppointments = myAppointments.filter(a => a.id !== data.appointmentId && a.name !== data.patientName);
+        setStore('medflow_doc_appointments', myAppointments);
+        renderAppointments();
+      }
     }
+
+    syncChannel.onmessage = (event) => handleIncomingSyncDoctor(event.data);
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'medflow_cross_tab_event' && event.newValue) {
+        try { handleIncomingSyncDoctor(JSON.parse(event.newValue)); } catch(e){}
+      }
+    });
+
+    try {
+      if (window.supabase) {
+        const supabaseDb = window.supabase.createClient("https://etydrijztimnucgmmkgm.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0eWRyaWp6dGltbnVjZ21ta2dtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyMzMxOTMsImV4cCI6MjEwNDgwOTE5M30.XqflZmClgHJx14U-NI-ragLiX60bkSK_HqR_i-JBeNE");
+        supabaseDb.channel('doctor-sync-channel')
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'emergency_alerts' }, payload => {
+             handleIncomingSyncDoctor({
+               type: 'EMERGENCY_ALARM_TRIGGERED', 
+               call: { id: payload.new.id, bed: payload.new.bed, patientName: payload.new.patient_name, condition: payload.new.symptoms }
+             });
+          })
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'appointments' }, payload => {
+             handleIncomingSyncDoctor({
+               type: 'NEW_APPOINTMENT', 
+               appointment: { id: payload.new.id, patientName: payload.new.patient_name, doctor: payload.new.doctor, dept: payload.new.dept, date: payload.new.date, reason: payload.new.reason }
+             });
+          })
+          .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'appointments' }, payload => {
+             handleIncomingSyncDoctor({ type: 'APPOINTMENT_REMOVED', appointmentId: payload.old.id, patientName: '' });
+          })
+          .subscribe();
+      }
+    } catch (e) {}
 
     window.addEventListener('DOMContentLoaded', () => {
       renderDischargeList();
