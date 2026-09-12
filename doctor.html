@@ -45,7 +45,7 @@
     </div>
   </header>
 
-  <!-- POP-UP MODAL: INCOMING EMERGENCY ALARM -->
+  <!-- POP-UP MODAL: INCOMING EMERGENCY ALARM (CODE RED) -->
   <div id="emergencyAlarmModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md hidden items-center justify-center z-50 p-4">
     <div class="bg-slate-900 border-2 border-red-500 rounded-3xl w-full max-w-sm p-6 space-y-4 alarm-flash text-center shadow-2xl">
       <div class="w-16 h-16 bg-red-500/20 text-red-500 border border-red-500/40 rounded-full flex items-center justify-center mx-auto text-2xl animate-bounce">
@@ -79,26 +79,30 @@
     </div>
   </div>
 
-  <!-- POP-UP MODAL: SHIFT PLANNER NOTIFICATION -->
+  <!-- POP-UP MODAL: SHIFT PLANNER NOTIFICATION (ISSUE 1 FIXED) -->
   <div id="shiftDirectiveModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md hidden items-center justify-center z-50 p-4">
     <div class="bg-slate-900 border-2 border-[#34D399] rounded-3xl w-full max-w-sm p-6 space-y-4 text-center shadow-2xl">
       <div class="w-16 h-16 bg-[#34D399]/20 text-[#34D399] border border-[#34D399]/40 rounded-full flex items-center justify-center mx-auto text-2xl">
-        <i class="fa-solid fa-person-walking-arrow-right animate-pulse"></i>
+        <i class="fa-solid fa-bell-concierge animate-bounce"></i>
       </div>
       
       <div>
         <span class="text-[11px] font-bold uppercase tracking-widest text-[#34D399] bg-[#34D399]/10 border border-[#34D399]/30 px-3 py-0.5 rounded-full">
-          SURGE REASSIGNMENT DIRECTIVE
+          SHIFT ASSIGNMENT DIRECTIVE
         </span>
-        <h3 class="text-lg font-extrabold text-white mt-3" id="shiftModalTitle">Emergency Surge Duty</h3>
+        <h3 class="text-lg font-extrabold text-white mt-3" id="shiftModalTitle">Emergency Surge Coverage</h3>
+        <p class="text-xs text-amber-300 font-medium" id="shiftModalWard">Target: Emergency Room — Bay 2</p>
         <p class="text-xs text-slate-300 bg-slate-950/80 p-3 rounded-xl border border-slate-800 mt-2 text-left" id="shiftModalInstruction">
-          Manager Shift Planner has adjusted workload. Report to Emergency Room immediately for trauma surge intake.
+          Manager Shift Planner has reassigned duties due to patient surge. Please report immediately.
         </p>
       </div>
 
       <div class="space-y-2">
-        <button onclick="confirmShiftTask()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm py-3.5 rounded-2xl shadow-xl shadow-emerald-900/50 flex items-center justify-center gap-2 transition-all">
-          <i class="fa-solid fa-circle-check"></i> Confirm & Mark Completed
+        <button onclick="acceptShiftDuty()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm py-3.5 rounded-2xl shadow-xl shadow-emerald-900/50 flex items-center justify-center gap-2 transition-all">
+          <i class="fa-solid fa-circle-check"></i> Accept Assignment & Report On Duty
+        </button>
+        <button onclick="dismissShiftModal()" class="w-full bg-slate-800 text-slate-400 text-xs py-2 rounded-xl hover:text-white transition-all">
+          Acknowledge & Close
         </button>
       </div>
     </div>
@@ -135,11 +139,9 @@
       </div>
 
       <!-- List of Appointments -->
-      <div class="space-y-3" id="doctorAppointmentsList">
-        <!-- Rendered via JS -->
-      </div>
+      <div class="space-y-3" id="doctorAppointmentsList"></div>
 
-      <!-- AI Consultation Area (Auto-triggered upon opening) -->
+      <!-- AI Consultation Area -->
       <div id="aiConsultationArea" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4 shadow-lg">
         <div class="flex justify-between items-center border-b border-slate-800 pb-3">
           <div>
@@ -159,7 +161,7 @@
           <textarea id="doctorNotes" readonly rows="3" class="w-full bg-slate-950 border border-emerald-500/30 rounded-xl p-3 text-xs text-emerald-50 focus:outline-none resize-none shadow-inner" placeholder="Fetching patient record from Hospital EMR..."></textarea>
         </div>
 
-        <!-- AI Output Result Box (Auto-Populated & Fully Editable by Doctor) -->
+        <!-- AI Output Result Box -->
         <div id="aiOutputBox" class="hidden bg-slate-950 border border-blue-500/30 rounded-xl p-4 shadow-lg space-y-3">
           <div class="flex justify-between items-center border-b border-slate-800/80 pb-2">
             <h4 class="text-[10px] font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
@@ -200,7 +202,7 @@
       </div>
     </section>
 
-    <!-- SECTION: DISCHARGE APPROVALS -->
+    <!-- SECTION: DISCHARGE APPROVALS (ISSUE 2 FIXED) -->
     <section class="space-y-3">
       <div class="flex justify-between items-center border-b border-slate-800 pb-2">
         <div>
@@ -209,12 +211,10 @@
           </h2>
           <p class="text-[11px] text-slate-400 mt-0.5">Stable inpatients ready for home care</p>
         </div>
-        <span class="text-xs bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded-full font-bold" id="queueCountBadge">2</span>
+        <span class="text-xs bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded-full font-bold" id="queueCountBadge">0</span>
       </div>
 
-      <div class="space-y-3" id="doctorDischargeList">
-        <!-- Injected via JS -->
-      </div>
+      <div class="space-y-3" id="doctorDischargeList"></div>
     </section>
 
     <!-- SECTION: SHIFT ASSIGNED DUTIES -->
@@ -223,7 +223,7 @@
       <div class="space-y-2" id="doctorTasksList">
         <div class="bg-slate-900 border border-slate-800 p-3 rounded-xl flex justify-between items-center text-xs">
           <div>
-            <span class="font-bold text-slate-200 block">Trauma Resuscitation Lead</span>
+            <span class="font-bold text-slate-200 block" id="directiveRoleTitle">Trauma Resuscitation Lead</span>
             <span class="text-slate-400 text-[11px]" id="directiveStatusText">Emergency Dept &bull; Shift Ends 04:00 PM</span>
           </div>
           <span class="text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-full font-semibold" id="directiveBadge">Active</span>
@@ -234,7 +234,62 @@
   </main>
 
   <script>
+    const SUPABASE_URL = "https://etydrijztimnucgmmkgm.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0eWRyaWp6dGltbnVjZ21ta2dtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyMzMxOTMsImV4cCI6MjEwNDgwOTE5M30.XqflZmClgHJx14U-NI-ragLiX60bkSK_HqR_i-JBeNE";
+    
     const syncChannel = new BroadcastChannel('medflow_hospital_sync');
+    let supabaseClient = null;
+    let globalRealtimeChannel = null;
+
+    if (window.supabase && window.supabase.createClient) {
+      try {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Universal WebSocket Realtime Channel across devices
+        globalRealtimeChannel = supabaseClient.channel('medflow_cross_device_room', {
+          config: { broadcast: { self: false } }
+        });
+
+        globalRealtimeChannel
+          .on('broadcast', { event: 'medflow_msg' }, (response) => {
+            if (response && response.payload) {
+              handleIncomingSyncDoctor(response.payload);
+            }
+          })
+          .subscribe();
+      } catch (err) {
+        console.error("Supabase init error:", err);
+      }
+    }
+
+    function broadcastToCloud(payload) {
+      payload._ts = Date.now() + Math.random();
+
+      // 1. Local Same-Browser Tab Sync
+      try { syncChannel.postMessage(payload); } catch(e){}
+      try { localStorage.setItem('medflow_cross_tab_event', JSON.stringify(payload)); } catch(e){}
+
+      // 2. Cross-Device Internet WebSocket Sync (Phone <-> Laptop)
+      if (globalRealtimeChannel) {
+        try {
+          globalRealtimeChannel.send({
+            type: 'broadcast',
+            event: 'medflow_msg',
+            payload: payload
+          });
+        } catch(e){}
+      }
+
+      // 3. Database Table Persistence
+      if (supabaseClient) {
+        try {
+          if (payload.type === 'CALL_CLAIMED') {
+            supabaseClient.from('emergency_alerts').update({ claimed_by: payload.doctorName }).eq('id', payload.callId).then();
+          } else if (payload.type === 'PATIENT_DISCHARGED') {
+            supabaseClient.from('patients').delete().eq('name', payload.patientName).then();
+          }
+        } catch(err){}
+      }
+    }
 
     function getStore(key, fallback) {
       try {
@@ -244,23 +299,6 @@
     }
     function setStore(key, val) {
       try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {}
-    }
-
-    function broadcastToCloud(payload) {
-      payload._ts = Date.now() + Math.random();
-      try { syncChannel.postMessage(payload); } catch(e){}
-      try { localStorage.setItem('medflow_cross_tab_event', JSON.stringify(payload)); } catch(e){}
-      
-      try {
-        if (window.supabase) {
-          const supabaseDb = window.supabase.createClient("https://etydrijztimnucgmmkgm.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0eWRyaWp6dGltbnVjZ21ta2dtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyMzMxOTMsImV4cCI6MjEwNDgwOTE5M30.XqflZmClgHJx14U-NI-ragLiX60bkSK_HqR_i-JBeNE");
-          if (payload.type === 'CALL_CLAIMED') {
-            supabaseDb.from('emergency_alerts').update({ claimed_by: payload.doctorName }).eq('id', payload.callId).then();
-          } else if (payload.type === 'PATIENT_DISCHARGED') {
-            supabaseDb.from('patients').delete().eq('name', payload.patientName).then();
-          }
-        }
-      } catch (err) {}
     }
 
     let activeAlarmCall = {
@@ -310,11 +348,13 @@
       }
     ];
 
-    // Persistent storage keeps discharged patients permanently removed
     let myAppointments = getStore('medflow_doc_appointments', initialDocAppointments);
     let dischargePatients = getStore('medflow_doc_discharge', initialDocDischarges);
     let dischargedNames = getStore('medflow_discharged_names', []);
     let currentConsultationId = null;
+
+    // Filter out any patient previously discharged
+    dischargePatients = dischargePatients.filter(p => !dischargedNames.includes(p.name));
 
     function renderAppointments() {
       const list = document.getElementById('doctorAppointmentsList');
@@ -466,25 +506,27 @@
       });
     }
 
-    // DISCHARGE HANDLER: Persists to localStorage & removes from Manager
+    // PERSISTENT DISCHARGE (ISSUE 2 FIXED)
     function approveDischarge(id) {
       const p = dischargePatients.find(item => item.id === id);
       if (!p) return;
 
+      // 1. Remove from local array
       dischargePatients = dischargePatients.filter(item => item.id !== id);
       setStore('medflow_doc_discharge', dischargePatients);
 
+      // 2. Add to permanent blacklist
       if (!dischargedNames.includes(p.name)) {
         dischargedNames.push(p.name);
         setStore('medflow_discharged_names', dischargedNames);
       }
       renderDischargeList();
 
-      // Notify manager over local & Supabase
+      // 3. PUSH DISCHARGE TO MANAGER'S LAPTOP OVER SUPABASE
       broadcastToCloud({ type: 'PATIENT_DISCHARGED', patientName: p.name });
     }
 
-    // VISIBLE MODAL POP-UP LOGIC
+    // MODAL HELPERS
     function showModal(id) {
       const el = document.getElementById(id);
       if (el) {
@@ -528,19 +570,30 @@
       document.getElementById('activeAttendingBanner').classList.add('hidden');
     }
 
-    // SHIFT DIRECTIVE HANDLER
-    function confirmShiftTask() {
+    // SHIFT ACCEPTANCE MODAL (ISSUE 1 FIXED)
+    function acceptShiftDuty() {
       hideModal('shiftDirectiveModal');
-      document.getElementById('directiveStatusText').innerText = "Emergency Surge Duty &bull; In Progress";
+      
+      const title = document.getElementById('shiftModalTitle').innerText;
+      const ward = document.getElementById('shiftModalWard').innerText;
+      
+      document.getElementById('directiveRoleTitle').innerText = title;
+      document.getElementById('directiveStatusText').innerText = `${ward} • Reporting On-Site`;
+      
       const badge = document.getElementById('directiveBadge');
-      badge.innerText = "Completed";
+      badge.innerText = "Accepted";
       badge.className = "text-[#34D399] bg-[#34D399]/10 border border-[#34D399]/20 px-2.5 py-1 rounded-full font-semibold";
 
+      // NOTIFY MANAGER OVER SUPABASE THAT DOCTOR ACCEPTED
       broadcastToCloud({
-        type: 'DOCTOR_SHIFT_TASK_COMPLETED',
+        type: 'SHIFT_ACCEPTED',
         doctorName: "Dr. Arvind Swaminathan",
-        ward: "Emergency Room"
+        dutyTitle: title
       });
+    }
+
+    function dismissShiftModal() {
+      hideModal('shiftDirectiveModal');
     }
 
     function playBeep() {
@@ -555,11 +608,11 @@
       } catch (e) {}
     }
 
-    // INCOMING SYNC FROM MANAGER
+    // INCOMING SYNC FROM MANAGER'S LAPTOP
     function handleIncomingSyncDoctor(data) {
       if (!data || !data.type) return;
 
-      // 1. EMERGENCY ALARM -> POP UP MODAL
+      // 1. EMERGENCY ALARM MODAL POPUP
       if (data.type === 'EMERGENCY_ALARM_TRIGGERED') {
         activeAlarmCall = {
           id: data.call.id,
@@ -574,15 +627,16 @@
         playBeep();
       }
 
-      // 2. SHIFT REASSIGNMENT DIRECTIVE -> POP UP CONFIRMATION MODAL
+      // 2. SHIFT DIRECTIVE POPUP (ISSUE 1 FIXED)
       if (data.type === 'SHIFT_REASSIGNMENT_DISPATCHED') {
-        document.getElementById('shiftModalTitle').innerText = data.directive.role || "Surge Duty";
-        document.getElementById('shiftModalInstruction').innerText = data.directive.instruction || "Report to Emergency Room immediately.";
+        document.getElementById('shiftModalTitle').innerText = data.directive.role || "Emergency Surge Duty";
+        document.getElementById('shiftModalWard').innerText = `Target: ${data.directive.targetWard || "Emergency Room"}`;
+        document.getElementById('shiftModalInstruction').innerText = data.directive.instruction || "Critical patient influx reported. Please report immediately.";
         showModal('shiftDirectiveModal');
         playBeep();
       }
 
-      // 3. APPOINTMENT BOOKED ON MANAGER -> SHOW IN DOCTOR QUEUE
+      // 3. APPOINTMENT BOOKED ON MANAGER -> APPEARS IN DOCTOR QUEUE
       if (data.type === 'NEW_APPOINTMENT') {
         const apt = data.appointment;
         if (!myAppointments.some(a => a.id === apt.id)) {
@@ -590,7 +644,7 @@
             id: apt.id,
             name: apt.patientName,
             time: "Scheduled",
-            reason: `${apt.dept} &bull; ${apt.reason}`,
+            reason: `${apt.dept} • ${apt.reason}`,
             emrData: `[EMR AUTO-PULL: Live Sync]\nPatient: ${apt.patientName}. Assigned: ${apt.doctor}. Department: ${apt.dept}. Reason for consult: ${apt.reason}. Triage status clear.`
           });
           setStore('medflow_doc_appointments', myAppointments);
@@ -604,7 +658,7 @@
         renderAppointments();
       }
 
-      // 4. MANAGER CHANGED PATIENT TO STABLE -> ADD TO DISCHARGE LIST
+      // 4. MANAGER CHANGED PATIENT TO STABLE -> ADDS TO DISCHARGE APPROVALS LIST
       if (data.type === 'SYNC_PATIENTS') {
         const stablePatients = data.patients.filter(p => p.risk === 'stable');
         stablePatients.forEach(sp => {
@@ -616,9 +670,9 @@
               age: sp.age || 45,
               ward: sp.ward || "General Ward",
               diagnosis: sp.condition || "Recovering - Cleared for Home",
-              vitals: "Stable &bull; Vitals Normal &bull; Ambulatory",
-              homeKit: "Standard Recovery Kit + Daily Log",
-              meds: "Continue prescribed oral medications"
+              vitals: "Stable • Vitals Normal • Ambulatory",
+              homeKit: "Digital Vitals Kit + 7-Day Care Protocol",
+              meds: "Oral maintenance medication as indicated"
             });
           }
         });
@@ -633,29 +687,6 @@
         try { handleIncomingSyncDoctor(JSON.parse(event.newValue)); } catch(e){}
       }
     });
-
-    try {
-      if (window.supabase) {
-        const supabaseDb = window.supabase.createClient("https://etydrijztimnucgmmkgm.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0eWRyaWp6dGltbnVjZ21ta2dtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyMzMxOTMsImV4cCI6MjEwNDgwOTE5M30.XqflZmClgHJx14U-NI-ragLiX60bkSK_HqR_i-JBeNE");
-        supabaseDb.channel('doctor-sync-channel')
-          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'emergency_alerts' }, payload => {
-             handleIncomingSyncDoctor({
-               type: 'EMERGENCY_ALARM_TRIGGERED', 
-               call: { id: payload.new.id, bed: payload.new.bed, patientName: payload.new.patient_name, condition: payload.new.symptoms }
-             });
-          })
-          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'appointments' }, payload => {
-             handleIncomingSyncDoctor({
-               type: 'NEW_APPOINTMENT', 
-               appointment: { id: payload.new.id, patientName: payload.new.patient_name, doctor: payload.new.doctor, dept: payload.new.dept, date: payload.new.date, reason: payload.new.reason }
-             });
-          })
-          .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'appointments' }, payload => {
-             handleIncomingSyncDoctor({ type: 'APPOINTMENT_REMOVED', appointmentId: payload.old.id, patientName: '' });
-          })
-          .subscribe();
-      }
-    } catch (e) {}
 
     window.addEventListener('DOMContentLoaded', () => {
       renderDischargeList();

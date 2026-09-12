@@ -139,7 +139,7 @@
         </div>
       </div>
 
-      <!-- RESTORED OVERVIEW CONTACTS & SUMMARY -->
+      <!-- OVERVIEW DETAILS & PHONE CONTACTS -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div class="bg-[#0E2127]/60 border border-[#183B44] rounded-2xl p-5">
           <h3 class="text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
@@ -574,27 +574,65 @@
   </footer>
 
   <script>
+    const SUPABASE_URL = "https://etydrijztimnucgmmkgm.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0eWRyaWp6dGltbnVjZ21ta2dtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyMzMxOTMsImV4cCI6MjEwNDgwOTE5M30.XqflZmClgHJx14U-NI-ragLiX60bkSK_HqR_i-JBeNE";
+    
     const syncChannel = new BroadcastChannel('medflow_hospital_sync');
+    let supabaseClient = null;
+    let globalRealtimeChannel = null;
+
+    if (window.supabase && window.supabase.createClient) {
+      try {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Universal WebSocket Realtime Channel across devices
+        globalRealtimeChannel = supabaseClient.channel('medflow_cross_device_room', {
+          config: { broadcast: { self: false } }
+        });
+
+        globalRealtimeChannel
+          .on('broadcast', { event: 'medflow_msg' }, (response) => {
+            if (response && response.payload) {
+              handleIncomingSyncManager(response.payload);
+            }
+          })
+          .subscribe();
+      } catch (err) {
+        console.error("Supabase init error:", err);
+      }
+    }
 
     function broadcastToCloud(payload) {
       payload._ts = Date.now() + Math.random();
+
+      // 1. Local Same-Browser Tab Sync
       try { syncChannel.postMessage(payload); } catch(e){}
       try { localStorage.setItem('medflow_cross_tab_event', JSON.stringify(payload)); } catch(e){}
-      
-      try {
-        if (window.supabase) {
-          const supabaseDb = window.supabase.createClient("https://etydrijztimnucgmmkgm.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0eWRyaWp6dGltbnVjZ21ta2dtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyMzMxOTMsImV4cCI6MjEwNDgwOTE5M30.XqflZmClgHJx14U-NI-ragLiX60bkSK_HqR_i-JBeNE");
+
+      // 2. Cross-Device Internet WebSocket Sync (Phone <-> Laptop)
+      if (globalRealtimeChannel) {
+        try {
+          globalRealtimeChannel.send({
+            type: 'broadcast',
+            event: 'medflow_msg',
+            payload: payload
+          });
+        } catch(e){}
+      }
+
+      // 3. Database Table Persistence
+      if (supabaseClient) {
+        try {
           if (payload.type === 'EMERGENCY_ALARM_TRIGGERED') {
-            supabaseDb.from('emergency_alerts').insert([{ id: payload.call.id, title: "Code Red", bed: payload.call.bed, patient_name: payload.call.patientName, symptoms: payload.call.condition }]).then();
+            supabaseClient.from('emergency_alerts').insert([{ id: payload.call.id, title: "Code Red", bed: payload.call.bed, patient_name: payload.call.patientName, symptoms: payload.call.condition }]).then();
           } else if (payload.type === 'NEW_APPOINTMENT') {
-            supabaseDb.from('appointments').insert([{ id: payload.appointment.id, patient_name: payload.appointment.patientName, doctor: payload.appointment.doctor, dept: payload.appointment.dept, date: payload.appointment.date, reason: payload.appointment.reason }]).then();
+            supabaseClient.from('appointments').insert([{ id: payload.appointment.id, patient_name: payload.appointment.patientName, doctor: payload.appointment.doctor, dept: payload.appointment.dept, date: payload.appointment.date, reason: payload.appointment.reason }]).then();
           } else if (payload.type === 'APPOINTMENT_REMOVED') {
-            supabaseDb.from('appointments').delete().eq('id', payload.appointmentId).then();
+            supabaseClient.from('appointments').delete().eq('id', payload.appointmentId).then();
           } else if (payload.type === 'PATIENT_DISCHARGED') {
-            supabaseDb.from('patients').delete().eq('name', payload.patientName).then();
+            supabaseClient.from('patients').delete().eq('name', payload.patientName).then();
           }
-        }
-      } catch (err) {}
+        } catch(err){}
+      }
     }
 
     function getStore(key, fallback) {
@@ -650,7 +688,7 @@
     };
 
     const dynamicIndianStaff = [
-      { name: "Dr. Arvind Swaminathan", role: "Chief Cardiologist", ward: "Emergency Room", duty: "Acute Trauma Resuscitation & Surge Support", shift: "08:00 AM – 04:00 PM" },
+      { name: "Dr. Arvind Swaminathan", role: "Chief Cardiologist", ward: "Emergency Room", duty: "Acute Trauma Surge Support", shift: "08:00 AM – 04:00 PM" },
       { name: "Dr. Priya Nair", role: "Pulmonologist / Intensivist", ward: "ICU Ward A", duty: "Ventilator Checks & OPD Asthma Desk", shift: "02:00 PM – 08:00 PM" },
       { name: "Dr. Amit Mukherjee", role: "Orthopedic Surgeon", ward: "Operation Theatre 2", duty: "Trauma Reconstruction & Surgeries", shift: "05:00 PM – 09:00 PM" },
       { name: "Dr. Sunita Rao", role: "Consultant Neurologist", ward: "Neuro Clinic", duty: "EEG Reviews & Stroke Recovery", shift: "09:00 AM – 03:00 PM" },
@@ -665,7 +703,7 @@
     const scenarios = {
       "08:00": { beds: 45, doctors: 6, nurses: 16, waitTime: "18 min", optWaitTime: "12 min", alertTitle: "Normal Operations", alertDesc: "Patient load is within standard limits. No major delays expected.", alertClass: "bg-emerald-500/10 border-emerald-500/30", alertTextClass: "text-[#34D399]", bottlenecks: [ { name: "Diagnostic Laboratory", status: "Normal", level: "40% Load", icon: "fa-flask", color: "text-[#5AA7A7]" }, { name: "Emergency Beds", status: "Sufficient", level: "55% Free", icon: "fa-bed", color: "text-[#BAC94A]" } ], recommendations: [ { text: "Keep existing ward staffing schedules active.", icon: "fa-sliders" }, { text: "Prepare diagnostic trays for mid-morning shift.", icon: "fa-vial" } ] },
       "12:00": { beds: 22, doctors: 5, nurses: 18, waitTime: "32 min", optWaitTime: "19 min", alertTitle: "Lab Processing Delay", alertDesc: "Diagnostic processing delays anticipated at 1:30 PM.", alertClass: "bg-[#F59E0B]/10 border-[#F59E0B]/30", alertTextClass: "text-[#F59E0B]", bottlenecks: [ { name: "Diagnostic Laboratory", status: "High Workload", level: "85% Load", icon: "fa-flask", color: "text-[#F59E0B]" }, { name: "Operation Theatre", status: "Normal", level: "60% Load", icon: "fa-heart-pulse", color: "text-[#6C8CBF]" } ], recommendations: [ { text: "Fast-track urgent blood analyses in Lab B.", icon: "fa-bolt" }, { text: "Schedule non-critical outpatient tests for afternoon.", icon: "fa-pause" } ] },
-      "17:00": { beds: 12, doctors: 8, nurses: 24, waitTime: "42 min", optWaitTime: "24 min", alertTitle: "Emergency Overload Warning", alertDesc: "Critical emergency bed shortage predicted between 5:00 PM – 7:00 PM.", alertClass: "bg-red-500/10 border-red-500/30 pulse-alert", alertTextClass: "text-red-300", bottlenecks: [ { name: "Emergency Department", status: "Critical", level: "92% Full", icon: "fa-truck-medical", color: "text-red-400" }, { name: "Shift Nurse Coverage", status: "High Demand", level: "Heavy Workload", icon: "fa-user-nurse", color: "text-[#F59E0B]" } ], recommendations: [ { text: "Discharge 4 stable patients home with medication & monitoring kit.", icon: "fa-house-medical" }, { text: "Move Dr. Arvind Swaminathan to ER for trauma surge response.", icon: "fa-people-arrows" }, { text: "Reserve 5 step-down beds for incoming emergency admissions.", icon: "fa-bed" } ] },
+      "17:00": { beds: 12, doctors: 8, nurses: 24, waitTime: "42 min", optWaitTime: "24 min", alertTitle: "Emergency Overload Warning", alertDesc: "Critical emergency bed shortage predicted between 5:00 PM – 7:00 PM.", alertClass: "bg-red-500/10 border-red-500/30 pulse-alert", alertTextClass: "text-red-300", bottlenecks: [ { name: "Emergency Department", status: "Critical", level: "92% Full", icon: "fa-truck-medical", color: "text-red-400" }, { name: "Shift Nurse Coverage", status: "High Demand", level: "Heavy Workload", icon: "fa-user-nurse", color: "text-[#F59E0B]" } ], recommendations: [ { text: "Discharge stable patients home with medication & monitoring kit.", icon: "fa-house-medical" }, { text: "Move Dr. Arvind Swaminathan to ER for emergency surge coverage.", icon: "fa-people-arrows" }, { text: "Reserve 5 step-down beds for incoming emergency admissions.", icon: "fa-bed" } ] },
       "22:00": { beds: 18, doctors: 4, nurses: 12, waitTime: "28 min", optWaitTime: "16 min", alertTitle: "Night Staff Shortage", alertDesc: "Physician coverage dipping below recommended ratios for night shift.", alertClass: "bg-[#F59E0B]/10 border-[#F59E0B]/30", alertTextClass: "text-[#F59E0B]", bottlenecks: [ { name: "On-Call Doctors", status: "Limited", level: "4 Active", icon: "fa-user-doctor", color: "text-red-400" }, { name: "Ambulance Intake", status: "Moderate", level: "50% Capacity", icon: "fa-ambulance", color: "text-[#34D399]" } ], recommendations: [ { text: "Call in on-call physician for secondary coverage.", icon: "fa-phone" }, { text: "Route direct non-critical admissions to Ward 3.", icon: "fa-route" } ] }
     };
 
@@ -965,6 +1003,7 @@
       closeAppointmentModal();
       document.getElementById('appointmentForm').reset();
 
+      // PUSH TO DOCTOR'S PHONE VIA SUPABASE BROADCAST
       broadcastToCloud({
         type: 'NEW_APPOINTMENT',
         appointment: newApt
@@ -980,6 +1019,7 @@
       setStore('medflow_patients', patients);
       renderPatients();
 
+      // PUSH UPDATED PATIENTS TO DOCTOR'S PHONE VIA SUPABASE BROADCAST
       broadcastToCloud({ type: 'SYNC_PATIENTS', patients: patients });
     }
 
@@ -1136,7 +1176,7 @@
       updateDashboard(keys[nextIdx]);
     });
 
-    // APPLY SHIFT ADJUSTMENTS + NOTIFY DOCTOR
+    // DISPATCH SHIFT DIRECTIVE TO DOCTOR OVER CLOUD
     document.getElementById('applyOptBtn').addEventListener('click', () => {
       activeTimers.forEach(t => clearTimeout(t));
       activeTimers = [];
@@ -1149,24 +1189,24 @@
       
       staffAssignments = dynamicIndianStaff.map(s => ({
         ...s,
-        status: "In Progress"
+        status: s.name.includes("Swaminathan") ? "Dispatched (Awaiting Acceptance)" : "In Progress"
       }));
       setStore('medflow_staff', staffAssignments);
       renderStaffAssignments();
 
       const btn = document.getElementById('applyOptBtn');
       btn.disabled = true;
-      btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin mr-1.5 text-[#F59E0B]"></i> Dispatching Staff & Alerting Doctor...`;
+      btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin mr-1.5 text-[#F59E0B]"></i> Sent Directive & Awaiting Doctor Response...`;
 
-      // Broadcast the shift directive to the Doctor's phone
+      // PUSH DIRECTIVE TO DOCTOR'S PHONE OVER SUPABASE BROADCAST
       broadcastToCloud({
         type: 'SHIFT_REASSIGNMENT_DISPATCHED',
         directive: {
           id: Date.now(),
           doctorName: "Dr. Arvind Swaminathan",
-          role: "Trauma Resuscitation Lead",
-          targetWard: "Emergency Room",
-          instruction: "Emergency overload surge reported. Report to Trauma Bay immediately."
+          role: "Trauma Surge Lead",
+          targetWard: "Emergency Room — Bay 2",
+          instruction: "Critical patient influx at Emergency Department. Please report to Trauma Bay ER-02 immediately."
         }
       });
       
@@ -1189,11 +1229,11 @@
       });
     });
 
-    // INCOMING SYNC FROM DOCTOR
+    // INCOMING SYNC FROM DOCTOR'S PHONE
     function handleIncomingSyncManager(data) {
       if (!data || !data.type) return;
 
-      // DOCTOR DISCHARGED A PATIENT: Remove from Manager's list & free bed
+      // 1. DOCTOR DISCHARGED A PATIENT: Remove from Manager's list & free bed
       if (data.type === 'PATIENT_DISCHARGED') {
         const dischargedName = (data.patientName || '').trim().toLowerCase();
         patients = patients.filter(p => p.name.trim().toLowerCase() !== dischargedName);
@@ -1209,21 +1249,22 @@
         }
       }
 
-      // DOCTOR CLAIMED CODE RED
+      // 2. DOCTOR CLAIMED CODE RED
       if (data.type === 'CALL_CLAIMED') {
         const banner = document.getElementById('globalAlarmBanner');
         const text = document.getElementById('globalAlarmText');
         banner.className = "bg-emerald-600 text-white py-2.5 px-4 text-center font-bold text-xs uppercase tracking-wide flex justify-between items-center z-50 shadow-lg";
-        text.innerHTML = `<i class="fa-solid fa-lock text-sm mr-2"></i> EMERGENCY CALL LOCKED &bull; ATTENDED BY ${data.doctorName.toUpperCase()}`;
+        text.innerHTML = `<i class="fa-solid fa-lock text-sm mr-2"></i> CALL LOCKED &bull; BED ATTENDED BY ${data.doctorName.toUpperCase()}`;
         document.getElementById('alarmBadge').classList.add('hidden');
       }
 
-      // DOCTOR CONFIRMED SHIFT REASSIGNMENT DUTY
-      if (data.type === 'DOCTOR_SHIFT_TASK_COMPLETED') {
+      // 3. DOCTOR ACCEPTED SHIFT ASSIGNMENT POPUP ON PHONE
+      if (data.type === 'SHIFT_ACCEPTED') {
         if (staffAssignments && staffAssignments.length > 0) {
           staffAssignments.forEach(s => {
             if (s.name.includes("Swaminathan")) {
               s.status = "Completed";
+              s.duty = "Accepted & On-Site at ER Bay 2";
             }
           });
           setStore('medflow_staff', staffAssignments);
@@ -1233,7 +1274,7 @@
         const btn = document.getElementById('applyOptBtn');
         if (btn) {
           btn.disabled = false;
-          btn.innerHTML = `<i class="fa-solid fa-circle-check text-[#BAC94A]"></i> Doctor Confirmed on Duty!`;
+          btn.innerHTML = `<i class="fa-solid fa-circle-check text-[#BAC94A]"></i> Dr. Arvind Swaminathan Accepted Duty!`;
           btn.className = "w-full bg-[#071317] text-[#BAC94A] border border-[#BAC94A]/30 font-semibold text-xs py-3 rounded-xl flex items-center justify-center gap-2";
           setTimeout(() => {
             btn.innerHTML = `<i class="fa-solid fa-check-double text-[#F59E0B]"></i> Apply Shift Adjustments & Alert Doctor`;
@@ -1249,24 +1290,6 @@
         try { handleIncomingSyncManager(JSON.parse(event.newValue)); } catch(e){}
       }
     });
-
-    try {
-      if (window.supabase) {
-        const supabaseDb = window.supabase.createClient("https://etydrijztimnucgmmkgm.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0eWRyaWp6dGltbnVjZ21ta2dtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyMzMxOTMsImV4cCI6MjEwNDgwOTE5M30.XqflZmClgHJx14U-NI-ragLiX60bkSK_HqR_i-JBeNE");
-        supabaseDb.channel('manager-sync-channel')
-          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'emergency_alerts' }, payload => {
-            if (payload.new.claimed_by) {
-              handleIncomingSyncManager({ type: 'CALL_CLAIMED', callId: payload.new.id, doctorName: payload.new.claimed_by });
-            }
-          })
-          .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'patients' }, payload => {
-            if (payload.old && payload.old.name) {
-              handleIncomingSyncManager({ type: 'PATIENT_DISCHARGED', patientName: payload.old.name });
-            }
-          })
-          .subscribe();
-      }
-    } catch (e) {}
 
     function resetAllDemoData() {
       if (confirm("Reset all hospital demo data back to default initial state?")) {
