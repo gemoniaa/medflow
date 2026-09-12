@@ -79,7 +79,7 @@
     </div>
   </div>
 
-  <!-- POP-UP MODAL: SHIFT PLANNER NOTIFICATION (ISSUE 1 FIXED) -->
+  <!-- POP-UP MODAL: SHIFT PLANNER NOTIFICATION -->
   <div id="shiftDirectiveModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md hidden items-center justify-center z-50 p-4">
     <div class="bg-slate-900 border-2 border-[#34D399] rounded-3xl w-full max-w-sm p-6 space-y-4 text-center shadow-2xl">
       <div class="w-16 h-16 bg-[#34D399]/20 text-[#34D399] border border-[#34D399]/40 rounded-full flex items-center justify-center mx-auto text-2xl">
@@ -202,7 +202,7 @@
       </div>
     </section>
 
-    <!-- SECTION: DISCHARGE APPROVALS (ISSUE 2 FIXED) -->
+    <!-- SECTION: DISCHARGE APPROVALS -->
     <section class="space-y-3">
       <div class="flex justify-between items-center border-b border-slate-800 pb-2">
         <div>
@@ -244,7 +244,6 @@
     if (window.supabase && window.supabase.createClient) {
       try {
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        // Universal WebSocket Realtime Channel across devices
         globalRealtimeChannel = supabaseClient.channel('medflow_cross_device_room', {
           config: { broadcast: { self: false } }
         });
@@ -264,11 +263,11 @@
     function broadcastToCloud(payload) {
       payload._ts = Date.now() + Math.random();
 
-      // 1. Local Same-Browser Tab Sync
+      // 1. Same-Browser Tab Broadcast
       try { syncChannel.postMessage(payload); } catch(e){}
       try { localStorage.setItem('medflow_cross_tab_event', JSON.stringify(payload)); } catch(e){}
 
-      // 2. Cross-Device Internet WebSocket Sync (Phone <-> Laptop)
+      // 2. Cross-Network Realtime WebSocket (PC <-> Phone)
       if (globalRealtimeChannel) {
         try {
           globalRealtimeChannel.send({
@@ -279,7 +278,7 @@
         } catch(e){}
       }
 
-      // 3. Database Table Persistence
+      // 3. PostgreSQL Table Sync
       if (supabaseClient) {
         try {
           if (payload.type === 'CALL_CLAIMED') {
@@ -353,7 +352,7 @@
     let dischargedNames = getStore('medflow_discharged_names', []);
     let currentConsultationId = null;
 
-    // Filter out any patient previously discharged
+    // Filter out previously discharged patients
     dischargePatients = dischargePatients.filter(p => !dischargedNames.includes(p.name));
 
     function renderAppointments() {
@@ -453,11 +452,21 @@
       document.getElementById('doctorAppointmentsList').classList.remove('hidden');
     }
 
+    // 1. NOTIFIES MANAGER APPOINTMENT IS ATTENDED/FINISHED
     function finishConsultation() {
+      const finishedPatient = myAppointments.find(a => a.id === currentConsultationId);
+      const patientName = finishedPatient ? finishedPatient.name : '';
+
       myAppointments = myAppointments.filter(a => a.id !== currentConsultationId);
       setStore('medflow_doc_appointments', myAppointments);
       renderAppointments();
       closeConsultation();
+
+      broadcastToCloud({
+        type: 'APPOINTMENT_COMPLETED',
+        appointmentId: currentConsultationId,
+        patientName: patientName
+      });
     }
 
     function renderDischargeList() {
@@ -506,27 +515,23 @@
       });
     }
 
-    // PERSISTENT DISCHARGE (ISSUE 2 FIXED)
+    // 2. DISCHARGE PATIENT & PERMANENTLY REMOVE ACROSS CLOUD
     function approveDischarge(id) {
       const p = dischargePatients.find(item => item.id === id);
       if (!p) return;
 
-      // 1. Remove from local array
       dischargePatients = dischargePatients.filter(item => item.id !== id);
       setStore('medflow_doc_discharge', dischargePatients);
 
-      // 2. Add to permanent blacklist
       if (!dischargedNames.includes(p.name)) {
         dischargedNames.push(p.name);
         setStore('medflow_discharged_names', dischargedNames);
       }
       renderDischargeList();
 
-      // 3. PUSH DISCHARGE TO MANAGER'S LAPTOP OVER SUPABASE
       broadcastToCloud({ type: 'PATIENT_DISCHARGED', patientName: p.name });
     }
 
-    // MODAL HELPERS
     function showModal(id) {
       const el = document.getElementById(id);
       if (el) {
@@ -570,7 +575,6 @@
       document.getElementById('activeAttendingBanner').classList.add('hidden');
     }
 
-    // SHIFT ACCEPTANCE MODAL (ISSUE 1 FIXED)
     function acceptShiftDuty() {
       hideModal('shiftDirectiveModal');
       
@@ -584,7 +588,6 @@
       badge.innerText = "Accepted";
       badge.className = "text-[#34D399] bg-[#34D399]/10 border border-[#34D399]/20 px-2.5 py-1 rounded-full font-semibold";
 
-      // NOTIFY MANAGER OVER SUPABASE THAT DOCTOR ACCEPTED
       broadcastToCloud({
         type: 'SHIFT_ACCEPTED',
         doctorName: "Dr. Arvind Swaminathan",
@@ -612,7 +615,7 @@
     function handleIncomingSyncDoctor(data) {
       if (!data || !data.type) return;
 
-      // 1. EMERGENCY ALARM MODAL POPUP
+      // 1. EMERGENCY ALARM MODAL
       if (data.type === 'EMERGENCY_ALARM_TRIGGERED') {
         activeAlarmCall = {
           id: data.call.id,
@@ -627,7 +630,7 @@
         playBeep();
       }
 
-      // 2. SHIFT DIRECTIVE POPUP (ISSUE 1 FIXED)
+      // 2. SHIFT DIRECTIVE POPUP
       if (data.type === 'SHIFT_REASSIGNMENT_DISPATCHED') {
         document.getElementById('shiftModalTitle').innerText = data.directive.role || "Emergency Surge Duty";
         document.getElementById('shiftModalWard').innerText = `Target: ${data.directive.targetWard || "Emergency Room"}`;
@@ -636,7 +639,7 @@
         playBeep();
       }
 
-      // 3. APPOINTMENT BOOKED ON MANAGER -> APPEARS IN DOCTOR QUEUE
+      // 3. APPOINTMENT BOOKED
       if (data.type === 'NEW_APPOINTMENT') {
         const apt = data.appointment;
         if (!myAppointments.some(a => a.id === apt.id)) {
@@ -658,11 +661,10 @@
         renderAppointments();
       }
 
-      // 4. MANAGER CHANGED PATIENT TO STABLE -> ADDS TO DISCHARGE APPROVALS LIST
+      // 4. MANAGER SYNC PATIENTS: POPULATE DISCHARGES ACCURATELY
       if (data.type === 'SYNC_PATIENTS') {
         const stablePatients = data.patients.filter(p => p.risk === 'stable');
         stablePatients.forEach(sp => {
-          // If not already discharged, include in list
           if (!dischargedNames.includes(sp.name) && !dischargePatients.some(dp => dp.name === sp.name)) {
             dischargePatients.unshift({
               id: sp.id,
@@ -691,6 +693,11 @@
     window.addEventListener('DOMContentLoaded', () => {
       renderDischargeList();
       renderAppointments();
+
+      // Request fresh patient data from Manager on mobile load
+      setTimeout(() => {
+        broadcastToCloud({ type: 'REQUEST_PATIENT_SYNC' });
+      }, 500);
     });
   </script>
 </body>

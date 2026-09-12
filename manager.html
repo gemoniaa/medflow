@@ -584,7 +584,6 @@
     if (window.supabase && window.supabase.createClient) {
       try {
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        // Universal WebSocket Realtime Channel across devices
         globalRealtimeChannel = supabaseClient.channel('medflow_cross_device_room', {
           config: { broadcast: { self: false } }
         });
@@ -604,11 +603,11 @@
     function broadcastToCloud(payload) {
       payload._ts = Date.now() + Math.random();
 
-      // 1. Local Same-Browser Tab Sync
+      // 1. Same-Browser Tab Broadcast
       try { syncChannel.postMessage(payload); } catch(e){}
       try { localStorage.setItem('medflow_cross_tab_event', JSON.stringify(payload)); } catch(e){}
 
-      // 2. Cross-Device Internet WebSocket Sync (Phone <-> Laptop)
+      // 2. Cross-Network Realtime WebSocket (PC <-> Phone)
       if (globalRealtimeChannel) {
         try {
           globalRealtimeChannel.send({
@@ -619,7 +618,7 @@
         } catch(e){}
       }
 
-      // 3. Database Table Persistence
+      // 3. PostgreSQL Table Sync
       if (supabaseClient) {
         try {
           if (payload.type === 'EMERGENCY_ALARM_TRIGGERED') {
@@ -833,6 +832,22 @@
       document.getElementById('alertTitle').innerText = data.alertTitle;
       document.getElementById('alertDesc').innerText = data.alertDesc;
 
+      const bContainer = document.getElementById('bottleneckContainer');
+      bContainer.innerHTML = '';
+      data.bottlenecks.forEach(b => {
+        bContainer.innerHTML += `
+          <div class="bg-[#071317] border border-[#183B44] rounded-xl p-3 flex items-center gap-3">
+            <div class="p-2 bg-[#0E2127] rounded-lg ${b.color}">
+              <i class="fa-solid ${b.icon}"></i>
+            </div>
+            <div>
+              <div class="text-xs font-semibold text-slate-200">${b.name}</div>
+              <div class="text-[11px] text-slate-400">Status: <span class="font-medium text-slate-300">${b.status}</span> (${b.level})</div>
+            </div>
+          </div>
+        `;
+      });
+
       const rList = document.getElementById('recommendationList');
       rList.innerHTML = '';
       data.recommendations.forEach(r => {
@@ -915,6 +930,11 @@
       }
 
       appointments.forEach(apt => {
+        const isAttended = apt.status === 'Finished' || apt.status === 'Attended';
+        const statusBadge = isAttended
+          ? `<span class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded text-[10px] uppercase font-bold flex items-center gap-1 w-fit"><i class="fa-solid fa-circle-check text-[9px]"></i> ATTENDED</span>`
+          : `<span class="bg-[#BAC94A]/20 text-[#BAC94A] border border-[#BAC94A]/40 px-2 py-0.5 rounded text-[10px] uppercase font-bold">UPCOMING</span>`;
+
         tbody.innerHTML += `
           <tr class="hover:bg-[#112931]/50 transition-colors border-b border-[#183B44]">
             <td class="p-3 font-semibold text-slate-100">${apt.patientName}</td>
@@ -924,7 +944,7 @@
             <td class="p-3 text-slate-300 font-medium">${apt.dept}</td>
             <td class="p-3 text-[#BAC94A] font-mono">${apt.date}</td>
             <td class="p-3 text-slate-400">${apt.reason}</td>
-            <td class="p-3"><span class="bg-[#BAC94A]/20 text-[#BAC94A] border border-[#BAC94A]/40 px-2 py-0.5 rounded text-[10px] uppercase font-bold">${apt.status}</span></td>
+            <td class="p-3">${statusBadge}</td>
             <td class="p-3 text-right">
               <button onclick="removeAppointment(${apt.id})" class="text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/30 px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all flex items-center gap-1 ml-auto">
                 <i class="fa-solid fa-trash-can text-[10px]"></i> Cancel
@@ -1003,7 +1023,6 @@
       closeAppointmentModal();
       document.getElementById('appointmentForm').reset();
 
-      // PUSH TO DOCTOR'S PHONE VIA SUPABASE BROADCAST
       broadcastToCloud({
         type: 'NEW_APPOINTMENT',
         appointment: newApt
@@ -1019,12 +1038,11 @@
       setStore('medflow_patients', patients);
       renderPatients();
 
-      // PUSH UPDATED PATIENTS TO DOCTOR'S PHONE VIA SUPABASE BROADCAST
+      // PUSH UPDATED PATIENTS TO DOCTOR'S WORKSTATION/PHONE
       broadcastToCloud({ type: 'SYNC_PATIENTS', patients: patients });
     }
 
     function removePatient(patientId) {
-      const p = patients.find(item => item.id === patientId);
       patients = patients.filter(item => item.id !== patientId);
       setStore('medflow_patients', patients);
       renderPatients();
@@ -1176,7 +1194,6 @@
       updateDashboard(keys[nextIdx]);
     });
 
-    // DISPATCH SHIFT DIRECTIVE TO DOCTOR OVER CLOUD
     document.getElementById('applyOptBtn').addEventListener('click', () => {
       activeTimers.forEach(t => clearTimeout(t));
       activeTimers = [];
@@ -1198,7 +1215,6 @@
       btn.disabled = true;
       btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin mr-1.5 text-[#F59E0B]"></i> Sent Directive & Awaiting Doctor Response...`;
 
-      // PUSH DIRECTIVE TO DOCTOR'S PHONE OVER SUPABASE BROADCAST
       broadcastToCloud({
         type: 'SHIFT_REASSIGNMENT_DISPATCHED',
         directive: {
@@ -1229,11 +1245,21 @@
       });
     });
 
-    // INCOMING SYNC FROM DOCTOR'S PHONE
+    // INCOMING SYNC FROM DOCTOR
     function handleIncomingSyncManager(data) {
       if (!data || !data.type) return;
 
-      // 1. DOCTOR DISCHARGED A PATIENT: Remove from Manager's list & free bed
+      // 1. DOCTOR ATTENDED APPOINTMENT -> UPDATE STATUS TO FINISHED
+      if (data.type === 'APPOINTMENT_COMPLETED') {
+        const apt = appointments.find(a => a.id === data.appointmentId || a.patientName === data.patientName);
+        if (apt) {
+          apt.status = "Finished";
+          setStore('medflow_appointments', appointments);
+          renderAppointments();
+        }
+      }
+
+      // 2. DOCTOR DISCHARGED A PATIENT: Remove from Manager's list & free bed
       if (data.type === 'PATIENT_DISCHARGED') {
         const dischargedName = (data.patientName || '').trim().toLowerCase();
         patients = patients.filter(p => p.name.trim().toLowerCase() !== dischargedName);
@@ -1249,7 +1275,12 @@
         }
       }
 
-      // 2. DOCTOR CLAIMED CODE RED
+      // 3. DOCTOR REQUESTED FRESH PATIENTS LIST ON REFRESH
+      if (data.type === 'REQUEST_PATIENT_SYNC') {
+        broadcastToCloud({ type: 'SYNC_PATIENTS', patients: patients });
+      }
+
+      // 4. DOCTOR CLAIMED CODE RED
       if (data.type === 'CALL_CLAIMED') {
         const banner = document.getElementById('globalAlarmBanner');
         const text = document.getElementById('globalAlarmText');
@@ -1258,7 +1289,7 @@
         document.getElementById('alarmBadge').classList.add('hidden');
       }
 
-      // 3. DOCTOR ACCEPTED SHIFT ASSIGNMENT POPUP ON PHONE
+      // 5. DOCTOR ACCEPTED SHIFT ASSIGNMENT
       if (data.type === 'SHIFT_ACCEPTED') {
         if (staffAssignments && staffAssignments.length > 0) {
           staffAssignments.forEach(s => {
