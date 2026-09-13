@@ -109,7 +109,7 @@
   </div>
 
   <!-- MAIN MOBILE CONTENT -->
-  <main class="flex-grow max-w-md w-full mx-auto p-4 space-y-5">
+  <main class="flex-grow max-w-md w-full mx-auto p-4 space-y-5 pb-20">
 
     <!-- ACTIVE ATTENDING STATUS BANNER -->
     <div id="activeAttendingBanner" class="hidden p-4 bg-emerald-500/10 border border-emerald-500/40 rounded-2xl text-xs space-y-2 shadow-inner">
@@ -233,6 +233,64 @@
 
   </main>
 
+  <!-- FLOATING CHATBOT WIDGET: DOCTOR CLINICAL COPILOT -->
+  <div class="fixed bottom-5 right-5 z-50 flex flex-col items-end">
+    <!-- Chat Window Container -->
+    <div id="doctorCopilotWindow" class="hidden w-80 sm:w-96 h-[440px] bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden mb-3">
+      <!-- Chat Header -->
+      <div class="bg-slate-950 border-b border-slate-800 p-3.5 flex justify-between items-center">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 text-sm font-bold">
+            <i class="fa-solid fa-stethoscope"></i>
+          </div>
+          <div>
+            <h4 class="text-xs font-bold text-white flex items-center gap-1.5">
+              Clinical Copilot
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            </h4>
+            <p class="text-[10px] text-slate-400">Dr. Arvind's On-Call Clinical Assistant</p>
+          </div>
+        </div>
+        <button onclick="toggleDoctorCopilot()" class="text-slate-400 hover:text-white text-xs p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Messages Area -->
+      <div id="doctorCopilotMessages" class="flex-grow p-3.5 space-y-3 overflow-y-auto text-xs">
+        <div class="flex items-start gap-2">
+          <div class="w-6 h-6 rounded-md bg-blue-600/20 text-blue-400 flex items-center justify-center text-[10px] shrink-0 mt-0.5">
+            <i class="fa-solid fa-stethoscope"></i>
+          </div>
+          <div class="bg-slate-950 border border-slate-800 p-2.5 rounded-xl text-slate-200 max-w-[85%] leading-relaxed">
+            Good shift, Dr. Arvind! I am your <strong>Clinical Copilot</strong>. Ask me for quick drug references, ECG guidelines, or triage protocols.
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Action Chips -->
+      <div class="p-2 border-t border-slate-800 bg-slate-950/60 flex gap-1.5 overflow-x-auto text-[10px]">
+        <button onclick="sendDoctorQuickPrompt('What is the emergency protocol for acute Arrhythmia?')" class="bg-slate-900 border border-slate-700 text-slate-300 px-2 py-1 rounded-md hover:border-blue-500 shrink-0 transition-colors">⚡ Arrhythmia Rx</button>
+        <button onclick="sendDoctorQuickPrompt('Standard Troponin-I cutoff protocol?')" class="bg-slate-900 border border-slate-700 text-slate-300 px-2 py-1 rounded-md hover:border-blue-500 shrink-0 transition-colors">🫀 Troponin Cutoff</button>
+        <button onclick="sendDoctorQuickPrompt('What are my next scheduled consultations?')" class="bg-slate-900 border border-slate-700 text-slate-300 px-2 py-1 rounded-md hover:border-blue-500 shrink-0 transition-colors">📅 My OPD Queue</button>
+      </div>
+
+      <!-- Input Bar -->
+      <div class="p-2.5 bg-slate-950 border-t border-slate-800 flex items-center gap-2">
+        <input type="text" id="doctorCopilotInput" onkeydown="handleDoctorCopilotKey(event)" placeholder="Ask clinical copilot..." class="flex-grow bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+        <button onclick="sendDoctorCopilotMessage()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs w-8 h-8 rounded-xl flex items-center justify-center transition-all shrink-0">
+          <i class="fa-solid fa-paper-plane text-[11px]"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Floating Toggle Button -->
+    <button onclick="toggleDoctorCopilot()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold p-3.5 rounded-full shadow-2xl flex items-center gap-2 transition-transform hover:scale-105">
+      <i class="fa-solid fa-stethoscope text-lg"></i>
+      <span class="text-xs font-semibold hidden sm:inline">Clinical Copilot</span>
+    </button>
+  </div>
+
   <script>
     const SUPABASE_URL = "https://etydrijztimnucgmmkgm.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0eWRyaWp6dGltbnVjZ21ta2dtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyMzMxOTMsImV4cCI6MjEwNDgwOTE5M30.XqflZmClgHJx14U-NI-ragLiX60bkSK_HqR_i-JBeNE";
@@ -263,11 +321,9 @@
     function broadcastToCloud(payload) {
       payload._ts = Date.now() + Math.random();
 
-      // 1. Same-Browser Tab Broadcast
       try { syncChannel.postMessage(payload); } catch(e){}
       try { localStorage.setItem('medflow_cross_tab_event', JSON.stringify(payload)); } catch(e){}
 
-      // 2. Cross-Network Realtime WebSocket (PC <-> Phone)
       if (globalRealtimeChannel) {
         try {
           globalRealtimeChannel.send({
@@ -278,7 +334,6 @@
         } catch(e){}
       }
 
-      // 3. PostgreSQL Table Sync
       if (supabaseClient) {
         try {
           if (payload.type === 'CALL_CLAIMED') {
@@ -352,7 +407,6 @@
     let dischargedNames = getStore('medflow_discharged_names', []);
     let currentConsultationId = null;
 
-    // Filter out previously discharged patients
     dischargePatients = dischargePatients.filter(p => !dischargedNames.includes(p.name));
 
     function renderAppointments() {
@@ -452,7 +506,6 @@
       document.getElementById('doctorAppointmentsList').classList.remove('hidden');
     }
 
-    // 1. NOTIFIES MANAGER APPOINTMENT IS ATTENDED/FINISHED
     function finishConsultation() {
       const finishedPatient = myAppointments.find(a => a.id === currentConsultationId);
       const patientName = finishedPatient ? finishedPatient.name : '';
@@ -515,7 +568,6 @@
       });
     }
 
-    // 2. DISCHARGE PATIENT & PERMANENTLY REMOVE ACROSS CLOUD
     function approveDischarge(id) {
       const p = dischargePatients.find(item => item.id === id);
       if (!p) return;
@@ -611,11 +663,9 @@
       } catch (e) {}
     }
 
-    // INCOMING SYNC FROM MANAGER'S LAPTOP
     function handleIncomingSyncDoctor(data) {
       if (!data || !data.type) return;
 
-      // 1. EMERGENCY ALARM MODAL
       if (data.type === 'EMERGENCY_ALARM_TRIGGERED') {
         activeAlarmCall = {
           id: data.call.id,
@@ -630,7 +680,6 @@
         playBeep();
       }
 
-      // 2. SHIFT DIRECTIVE POPUP
       if (data.type === 'SHIFT_REASSIGNMENT_DISPATCHED') {
         document.getElementById('shiftModalTitle').innerText = data.directive.role || "Emergency Surge Duty";
         document.getElementById('shiftModalWard').innerText = `Target: ${data.directive.targetWard || "Emergency Room"}`;
@@ -639,7 +688,6 @@
         playBeep();
       }
 
-      // 3. APPOINTMENT BOOKED
       if (data.type === 'NEW_APPOINTMENT') {
         const apt = data.appointment;
         if (!myAppointments.some(a => a.id === apt.id)) {
@@ -661,7 +709,6 @@
         renderAppointments();
       }
 
-      // 4. MANAGER SYNC PATIENTS: POPULATE DISCHARGES ACCURATELY
       if (data.type === 'SYNC_PATIENTS') {
         const stablePatients = data.patients.filter(p => p.risk === 'stable');
         stablePatients.forEach(sp => {
@@ -690,11 +737,90 @@
       }
     });
 
+    // ----------------------------------------------------
+    // DOCTOR CLINICAL COPILOT CHATBOT LOGIC
+    // ----------------------------------------------------
+    function toggleDoctorCopilot() {
+      const windowEl = document.getElementById('doctorCopilotWindow');
+      if (windowEl.classList.contains('hidden')) {
+        windowEl.classList.remove('hidden');
+        document.getElementById('doctorCopilotInput').focus();
+      } else {
+        windowEl.classList.add('hidden');
+      }
+    }
+
+    function handleDoctorCopilotKey(e) {
+      if (e.key === 'Enter') sendDoctorCopilotMessage();
+    }
+
+    function sendDoctorQuickPrompt(promptText) {
+      document.getElementById('doctorCopilotInput').value = promptText;
+      sendDoctorCopilotMessage();
+    }
+
+    function appendDoctorCopilotMessage(sender, text) {
+      const container = document.getElementById('doctorCopilotMessages');
+      const isUser = sender === 'user';
+
+      const msgHtml = isUser ? `
+        <div class="flex items-start justify-end gap-2">
+          <div class="bg-blue-600 text-white p-2.5 rounded-xl rounded-tr-none text-xs max-w-[85%] leading-relaxed">
+            ${text}
+          </div>
+        </div>
+      ` : `
+        <div class="flex items-start gap-2">
+          <div class="w-6 h-6 rounded-md bg-blue-600/20 text-blue-400 flex items-center justify-center text-[10px] shrink-0 mt-0.5">
+            <i class="fa-solid fa-stethoscope"></i>
+          </div>
+          <div class="bg-slate-950 border border-slate-800 p-2.5 rounded-xl text-slate-200 text-xs max-w-[85%] leading-relaxed">
+            ${text}
+          </div>
+        </div>
+      `;
+
+      container.innerHTML += msgHtml;
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function sendDoctorCopilotMessage() {
+      const input = document.getElementById('doctorCopilotInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      appendDoctorCopilotMessage('user', text);
+      input.value = '';
+
+      setTimeout(() => {
+        const reply = generateDoctorCopilotResponse(text.toLowerCase());
+        appendDoctorCopilotMessage('bot', reply);
+      }, 350);
+    }
+
+    function generateDoctorCopilotResponse(query) {
+      if (query.includes('arrhythmia') || query.includes('bp drop') || query.includes('ecg')) {
+        return `<strong>Acute Arrhythmia Protocol:</strong><br>1. Secure IV access & order immediate 12-lead ECG.<br>2. Check vitals & continuous telemetry.<br>3. Keep crash cart on standby with Amiodarone 150mg IV over 10 min if ventricular origin.`;
+      }
+      if (query.includes('troponin') || query.includes('cardiac') || query.includes('chest pain')) {
+        return `<strong>High-Sensitivity Troponin-I:</strong><br>Standard upper reference cutoff is &gt;0.04 ng/mL. Repeat testing recommended at 1-3 hours post onset to evaluate delta elevation.`;
+      }
+      if (query.includes('appointment') || query.includes('queue') || query.includes('schedule')) {
+        const count = myAppointments.length;
+        return `You have <strong>${count} outpatient consultation(s)</strong> remaining in today's clinic schedule. Click 'Consult AI' beside any patient card to review streaming EMR logs.`;
+      }
+      if (query.includes('discharge') || query.includes('home')) {
+        const count = dischargePatients.length;
+        return `You currently have <strong>${count} patient(s) ready for home discharge review</strong>. Authorizing frees up beds for incoming trauma bay arrivals.`;
+      }
+
+      return `Clinical advisory logged. For immediate drug references, contraindications, or telemetry triage, let me know.`;
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
       renderDischargeList();
       renderAppointments();
 
-      // Request fresh patient data from Manager on mobile load
       setTimeout(() => {
         broadcastToCloud({ type: 'REQUEST_PATIENT_SYNC' });
       }, 500);

@@ -77,7 +77,7 @@
   </header>
 
   <!-- Main Container -->
-  <main class="flex-grow max-w-7xl w-full mx-auto p-4 md:p-6">
+  <main class="flex-grow max-w-7xl w-full mx-auto p-4 md:p-6 pb-20">
 
     <!-- TAB 1: OVERVIEW -->
     <section id="tab1" class="tab-content space-y-6">
@@ -139,7 +139,6 @@
         </div>
       </div>
 
-      <!-- OVERVIEW DETAILS & PHONE CONTACTS -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div class="bg-[#0E2127]/60 border border-[#183B44] rounded-2xl p-5">
           <h3 class="text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
@@ -454,6 +453,64 @@
 
   </main>
 
+  <!-- FLOATING CHATBOT WIDGET: MEDFLOW COPILOT -->
+  <div class="fixed bottom-5 right-5 z-50 flex flex-col items-end">
+    <!-- Chat Window Container -->
+    <div id="copilotChatWindow" class="hidden w-80 sm:w-96 h-[460px] bg-[#0E2127] border border-[#183B44] rounded-2xl shadow-2xl flex flex-col overflow-hidden mb-3">
+      <!-- Chat Header -->
+      <div class="bg-[#071317] border-b border-[#183B44] p-3 flex justify-between items-center">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-[#5AA7A7]/20 border border-[#5AA7A7]/40 flex items-center justify-center text-[#5AA7A7] text-sm font-bold">
+            <i class="fa-solid fa-robot"></i>
+          </div>
+          <div>
+            <h4 class="text-xs font-bold text-white flex items-center gap-1.5">
+              MedFlow Copilot
+              <span class="w-1.5 h-1.5 rounded-full bg-[#34D399] animate-pulse"></span>
+            </h4>
+            <p class="text-[10px] text-slate-400">Hospital Operations AI Assistant</p>
+          </div>
+        </div>
+        <button onclick="toggleCopilotChat()" class="text-slate-400 hover:text-white text-xs p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Messages Area -->
+      <div id="copilotMessages" class="flex-grow p-3.5 space-y-3 overflow-y-auto text-xs">
+        <div class="flex items-start gap-2">
+          <div class="w-6 h-6 rounded-md bg-[#5AA7A7]/20 text-[#5AA7A7] flex items-center justify-center text-[10px] shrink-0 mt-0.5">
+            <i class="fa-solid fa-robot"></i>
+          </div>
+          <div class="bg-[#071317] border border-[#183B44] p-2.5 rounded-xl text-slate-200 max-w-[85%] leading-relaxed">
+            Hello! I am your <strong>MedFlow Operations Copilot</strong>. Ask me about live bed capacity, doctor duties, emergency protocols, or staff transfers.
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Action Chips -->
+      <div class="p-2 border-t border-[#183B44]/60 bg-[#071317]/50 flex gap-1.5 overflow-x-auto text-[10px]">
+        <button onclick="sendQuickPrompt('What is our current bed capacity?')" class="bg-[#0E2127] border border-[#183B44] text-slate-300 px-2 py-1 rounded-md hover:border-[#5AA7A7] shrink-0 transition-colors">🛏️ Bed Capacity</button>
+        <button onclick="sendQuickPrompt('Who is the on-duty emergency doctor?')" class="bg-[#0E2127] border border-[#183B44] text-slate-300 px-2 py-1 rounded-md hover:border-[#5AA7A7] shrink-0 transition-colors">👨‍⚕️ On-Duty Lead</button>
+        <button onclick="sendQuickPrompt('What are the active hospital emergency desks?')" class="bg-[#0E2127] border border-[#183B44] text-slate-300 px-2 py-1 rounded-md hover:border-[#5AA7A7] shrink-0 transition-colors">📞 Emergency Desks</button>
+      </div>
+
+      <!-- Input Bar -->
+      <div class="p-2.5 bg-[#071317] border-t border-[#183B44] flex items-center gap-2">
+        <input type="text" id="copilotInput" onkeydown="handleCopilotKey(event)" placeholder="Ask copilot about operations..." class="flex-grow bg-[#0E2127] border border-[#183B44] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#5AA7A7]">
+        <button onclick="sendCopilotMessage()" class="bg-[#5AA7A7] hover:bg-[#499393] text-white text-xs w-8 h-8 rounded-xl flex items-center justify-center transition-all shrink-0">
+          <i class="fa-solid fa-paper-plane text-[11px]"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Floating Toggle Button -->
+    <button onclick="toggleCopilotChat()" class="bg-[#5AA7A7] hover:bg-[#499393] text-white font-bold p-3.5 rounded-full shadow-2xl flex items-center gap-2 transition-transform hover:scale-105">
+      <i class="fa-solid fa-comment-dots text-lg"></i>
+      <span class="text-xs font-semibold hidden sm:inline">Copilot AI</span>
+    </button>
+  </div>
+
   <!-- Patient Registration Modal -->
   <div id="patientModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
     <div class="bg-[#0E2127] border border-[#183B44] rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl">
@@ -603,11 +660,9 @@
     function broadcastToCloud(payload) {
       payload._ts = Date.now() + Math.random();
 
-      // 1. Same-Browser Tab Broadcast
       try { syncChannel.postMessage(payload); } catch(e){}
       try { localStorage.setItem('medflow_cross_tab_event', JSON.stringify(payload)); } catch(e){}
 
-      // 2. Cross-Network Realtime WebSocket (PC <-> Phone)
       if (globalRealtimeChannel) {
         try {
           globalRealtimeChannel.send({
@@ -618,7 +673,6 @@
         } catch(e){}
       }
 
-      // 3. PostgreSQL Table Sync
       if (supabaseClient) {
         try {
           if (payload.type === 'EMERGENCY_ALARM_TRIGGERED') {
@@ -1038,7 +1092,6 @@
       setStore('medflow_patients', patients);
       renderPatients();
 
-      // PUSH UPDATED PATIENTS TO DOCTOR'S WORKSTATION/PHONE
       broadcastToCloud({ type: 'SYNC_PATIENTS', patients: patients });
     }
 
@@ -1245,11 +1298,9 @@
       });
     });
 
-    // INCOMING SYNC FROM DOCTOR
     function handleIncomingSyncManager(data) {
       if (!data || !data.type) return;
 
-      // 1. DOCTOR ATTENDED APPOINTMENT -> UPDATE STATUS TO FINISHED
       if (data.type === 'APPOINTMENT_COMPLETED') {
         const apt = appointments.find(a => a.id === data.appointmentId || a.patientName === data.patientName);
         if (apt) {
@@ -1259,7 +1310,6 @@
         }
       }
 
-      // 2. DOCTOR DISCHARGED A PATIENT: Remove from Manager's list & free bed
       if (data.type === 'PATIENT_DISCHARGED') {
         const dischargedName = (data.patientName || '').trim().toLowerCase();
         patients = patients.filter(p => p.name.trim().toLowerCase() !== dischargedName);
@@ -1275,12 +1325,10 @@
         }
       }
 
-      // 3. DOCTOR REQUESTED FRESH PATIENTS LIST ON REFRESH
       if (data.type === 'REQUEST_PATIENT_SYNC') {
         broadcastToCloud({ type: 'SYNC_PATIENTS', patients: patients });
       }
 
-      // 4. DOCTOR CLAIMED CODE RED
       if (data.type === 'CALL_CLAIMED') {
         const banner = document.getElementById('globalAlarmBanner');
         const text = document.getElementById('globalAlarmText');
@@ -1289,7 +1337,6 @@
         document.getElementById('alarmBadge').classList.add('hidden');
       }
 
-      // 5. DOCTOR ACCEPTED SHIFT ASSIGNMENT
       if (data.type === 'SHIFT_ACCEPTED') {
         if (staffAssignments && staffAssignments.length > 0) {
           staffAssignments.forEach(s => {
@@ -1321,6 +1368,94 @@
         try { handleIncomingSyncManager(JSON.parse(event.newValue)); } catch(e){}
       }
     });
+
+    // ----------------------------------------------------
+    // COPILOT AI CHATBOT LOGIC
+    // ----------------------------------------------------
+    function toggleCopilotChat() {
+      const windowEl = document.getElementById('copilotChatWindow');
+      if (windowEl.classList.contains('hidden')) {
+        windowEl.classList.remove('hidden');
+        document.getElementById('copilotInput').focus();
+      } else {
+        windowEl.classList.add('hidden');
+      }
+    }
+
+    function handleCopilotKey(e) {
+      if (e.key === 'Enter') sendCopilotMessage();
+    }
+
+    function sendQuickPrompt(promptText) {
+      document.getElementById('copilotInput').value = promptText;
+      sendCopilotMessage();
+    }
+
+    function appendCopilotMessage(sender, text) {
+      const messagesContainer = document.getElementById('copilotMessages');
+      const isUser = sender === 'user';
+      
+      const msgHtml = isUser ? `
+        <div class="flex items-start justify-end gap-2">
+          <div class="bg-[#5AA7A7] text-white p-2.5 rounded-xl rounded-tr-none text-xs max-w-[85%] leading-relaxed">
+            ${text}
+          </div>
+        </div>
+      ` : `
+        <div class="flex items-start gap-2">
+          <div class="w-6 h-6 rounded-md bg-[#5AA7A7]/20 text-[#5AA7A7] flex items-center justify-center text-[10px] shrink-0 mt-0.5">
+            <i class="fa-solid fa-robot"></i>
+          </div>
+          <div class="bg-[#071317] border border-[#183B44] p-2.5 rounded-xl text-slate-200 text-xs max-w-[85%] leading-relaxed">
+            ${text}
+          </div>
+        </div>
+      `;
+
+      messagesContainer.innerHTML += msgHtml;
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function sendCopilotMessage() {
+      const input = document.getElementById('copilotInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      appendCopilotMessage('user', text);
+      input.value = '';
+
+      // Generate contextual operations response
+      setTimeout(() => {
+        const reply = generateCopilotResponse(text.toLowerCase());
+        appendCopilotMessage('bot', reply);
+      }, 400);
+    }
+
+    function generateCopilotResponse(query) {
+      const freeBeds = document.getElementById('bedCount') ? document.getElementById('bedCount').innerText : '12';
+      const waitTime = document.getElementById('waitTime') ? document.getElementById('waitTime').innerText : '42 min';
+
+      if (query.includes('bed') || query.includes('capacity')) {
+        return `We currently have <strong>${freeBeds} / 100 beds available</strong>. Emergency Room occupancy is running high at 92%, while General Ward B has step-down surge availability.`;
+      }
+      if (query.includes('doctor') || query.includes('lead') || query.includes('swaminathan')) {
+        return `<strong>Dr. Arvind Swaminathan</strong> is on duty as the Emergency Lead & Chief Cardiologist. He is stationed for acute resuscitation response.`;
+      }
+      if (query.includes('desk') || query.includes('phone') || query.includes('contact')) {
+        return `Direct hospital emergency desks:<br>• <strong>ER Desk:</strong> +91 (044) 4396 9999<br>• <strong>Ambulance Control:</strong> +91 (044) 4396 9911<br>• <strong>ICU Control:</strong> +91 (044) 4396 9944`;
+      }
+      if (query.includes('wait') || query.includes('time') || query.includes('delay')) {
+        return `Current average emergency wait time is <strong>${waitTime}</strong>. Applying the 5:00 PM shift adjustment is expected to lower this to 24 minutes.`;
+      }
+      if (query.includes('code red') || query.includes('alert') || query.includes('emergency')) {
+        return `To broadcast a Code Red, head to <strong>Tab 4: Alerts</strong> and click 'Send Emergency Broadcast'. This will immediately lock the affected bed bay and alert all on-duty mobile units.`;
+      }
+      if (query.includes('appointment') || query.includes('booking')) {
+        return `Outpatient bookings can be made from <strong>Tab 5: Appointments</strong>. MedFlow uses automated keyword ingestion to match patient symptoms to the right specialist.`;
+      }
+
+      return `Understood. I am monitoring live hospital metrics. Total free beds: <strong>${freeBeds}</strong>, wait time: <strong>${waitTime}</strong>. Let me know if you need specific ward rosters or triage reports.`;
+    }
 
     function resetAllDemoData() {
       if (confirm("Reset all hospital demo data back to default initial state?")) {
